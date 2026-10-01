@@ -1,6 +1,6 @@
 # NAMING_CONVENTIONS.md
 
-# Yapay Zekâ Destekli Sağlıklı Yaşam ve Danışmanlık Platformu
+# Yapay Zekâ Destekli Sağlık ve Fitness Platformu
 ## İsimlendirme Standartları
 
 Bu doküman; backend, mobil, web, yapay zekâ servisi, veritabanı, API ve Git üzerinde kullanılan isimlerin tutarlı olmasını sağlamak için hazırlanmıştır.
@@ -890,6 +890,7 @@ AdvisorType
 TaskStatus
 WorkoutStatus
 RecognitionType
+Weekday
 ```
 
 Enum değerleri de `PascalCase` kullanılmalıdır.
@@ -905,6 +906,8 @@ Active
 Completed
 Cancelled
 ```
+
+`WorkoutDay.Weekday` haftanın gününü `Monday`, `Tuesday`, `Wednesday`, `Thursday`, `Friday`, `Saturday`, `Sunday` string değerleriyle belirtir. `DayNumber` program içi sıra için kalır; bu iki alan aynı anlamda kullanılmaz.
 
 ---
 

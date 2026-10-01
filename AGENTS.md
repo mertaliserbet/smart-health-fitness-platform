@@ -1,6 +1,6 @@
 # AGENTS.md
 
-# Project: AI-Supported Healthy Living and Consulting Platform
+# Project: Yapay Zekâ Destekli Sağlık ve Fitness Platformu
 
 This repository contains a university graduation project developed by two developers.
 

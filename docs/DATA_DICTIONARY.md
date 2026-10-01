@@ -1,6 +1,6 @@
 # DATA_DICTIONARY.md
 
-# Yapay Zekâ Destekli Sağlıklı Yaşam ve Danışmanlık Platformu
+# Yapay Zekâ Destekli Sağlık ve Fitness Platformu
 ## Veri Sözlüğü
 
 Bu doküman projede kullanılan temel domain kavramlarını, entity'leri, alanları ve ilişkileri tanımlar.
@@ -176,7 +176,6 @@ CreatedAt
 `Status` için önerilen değerler:
 
 ```text
-Pending
 Active
 Ended
 Cancelled
@@ -199,6 +198,9 @@ Kurallar:
 - Bir kullanıcı aynı anda birden fazla danışmana sahip olabilir.
 - Bir trainer/dietitian birden fazla kullanıcıyla çalışabilir.
 - `AdvisorId`, sistemde Trainer veya Dietitian rolüne sahip bir `User` kaydını işaret eder.
+- V1'de ilişkiyi yalnızca `Admin` oluşturur. Davet veya kullanıcı onayı yoktur; yeni kayıt doğrudan `Active` olur ve hemen iki tarafın ekranlarında görünür.
+- `StartDate` V1'de atama tarihidir. İlişki sonradan yalnızca `Ended` veya `Cancelled` durumuna geçirilebilir; bu durumda `EndDate` doldurulur.
+- `Pending` V1 `UserAdvisor` durumları arasında kullanılmaz.
 
 ---
 
@@ -365,6 +367,8 @@ CreatedAt
 UpdatedAt
 ```
 
+V1'de bir `User` için aynı anda en fazla bir `IsActive = true` `WorkoutPlan` bulunur. Yeni plan aktif hale getirildiğinde önceki aktif plan pasifleştirilir. Aktif plan yalnızca `StartDate` ve `EndDate` dahil tarih aralığında bugünkü antrenman üretir.
+
 Örnek:
 
 ```text
@@ -387,8 +391,11 @@ Id
 WorkoutPlanId
 Name
 DayNumber
+Weekday
 Description
 ```
+
+`DayNumber` program içindeki sıralama numarasıdır. `Weekday` haftalık takvim günüdür ve `Monday`, `Tuesday`, `Wednesday`, `Thursday`, `Friday`, `Saturday` veya `Sunday` değerlerinden birini alır. V1'de her `WorkoutDay` için zorunludur; aynı `WorkoutPlan` içinde aynı `Weekday` değeri ikinci kez kullanılamaz. Bugünkü antrenman, tarih aralığındaki aktif planın bugünün `Weekday` değeriyle eşleşen günüdür; eşleşme yoksa bugün antrenman yoktur.
 
 Örnek:
 
@@ -562,6 +569,8 @@ CreatedAt
 UpdatedAt
 ```
 
+V1'de bir `User` için aynı anda en fazla bir `IsActive = true` `NutritionGoal` bulunur. Yeni hedef oluşturulup aktif edildiğinde önceki aktif hedef aynı işlemde `IsActive = false` yapılır; önceki hedef otomatik olarak yeniden etkinleşmez. Mobil `Planım` ve günlük beslenme durumu yalnızca bu aktif hedefi kullanır. Hedefin `StartDate` ve `EndDate` tarihleri dahil geçerlilik aralığı dışındaysa o gün için hedef gösterilmez.
+
 ---
 
 # 20. NutritionRecord
@@ -583,9 +592,12 @@ CarbohydrateGrams
 FatGrams
 PortionDescription
 SourceType
+FoodRecognitionLogId
 ConsumedAt
 CreatedAt
 ```
+
+`FoodRecognitionLogId` manuel kayıtta `null` olabilir. AI sonucundan kaydedilen öğün, ham tahmin kaydına bu alanla bağlanır; kullanıcının düzelttiği değerler `NutritionRecord` üzerinde tutulur.
 
 `MealType` örnekleri:
 
@@ -618,6 +630,7 @@ Id
 UserId
 ImageUrl
 DetectedFood
+DetectedItems
 EstimatedPortion
 EstimatedCalories
 EstimatedProteinGrams
@@ -627,6 +640,8 @@ Confidence
 WasCorrectedByUser
 CreatedAt
 ```
+
+`DetectedItems`, API'deki `items` listesinin her yiyecek için ad, tahmini porsiyon, kalori, makrolar ve güven düzeyini saklayan JSON karşılığıdır. `DetectedFood` ve `EstimatedPortion` genel özet; `EstimatedCalories` ve makro alanları `totals` toplamıdır. `FoodRecognitionLog` ham tahmini korur; kullanıcı düzeltmesi onu değiştirmez.
 
 Kurallar:
 
@@ -921,6 +936,8 @@ Food Recognition
 Gym Equipment Recognition
 ```
 
+`FoodRecognition` yemek görselini analiz eden işlemin adıdır; V1'de ayrı bir `FoodRecognition` entity'si oluşturulmaz. Ham tahmin `FoodRecognitionLog`, kullanıcının onayladığı/düzelttiği öğün `NutritionRecord` olarak tutulur. Ekipman tahmini mevcut `GymEquipment` kaydıyla eşleşir.
+
 UI adı `AI` olabilir ancak backend tarafında mümkün olduğunca spesifik servis isimleri kullanılmalıdır.
 
 Örnek:
@@ -953,10 +970,21 @@ Dietitian
 ## UserAdvisorStatus
 
 ```text
-Pending
 Active
 Ended
 Cancelled
+```
+
+## Weekday
+
+```text
+Monday
+Tuesday
+Wednesday
+Thursday
+Friday
+Saturday
+Sunday
 ```
 
 ## UserTaskStatus

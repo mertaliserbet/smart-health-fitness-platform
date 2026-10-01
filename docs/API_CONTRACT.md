@@ -1,6 +1,6 @@
 # API_CONTRACT.md
 
-# Yapay Zekâ Destekli Sağlıklı Yaşam ve Danışmanlık Platformu
+# Yapay Zekâ Destekli Sağlık ve Fitness Platformu
 ## API Sözleşmesi
 
 Bu doküman mobil uygulama, web uygulaması ve ASP.NET Core backend arasındaki REST API sözleşmesini tanımlar.
@@ -19,6 +19,7 @@ Bu dosya aşağıdaki dokümanlarla birlikte değerlendirilmelidir:
 - `docs/PROJECT_CONTEXT.md`
 - `docs/NAMING_CONVENTIONS.md`
 - `docs/DATA_DICTIONARY.md`
+- `docs/UI_FLOW.md`
 
 ---
 
@@ -78,6 +79,7 @@ Admin
 ```
 
 Authorization yalnızca frontend üzerinde yapılmamalıdır. Backend her protected endpoint için rol ve sahiplik kontrolü yapmalıdır.
+`Assigned Trainer` ve `Assigned Dietitian`, ilgili `UserAdvisor` ilişkisinin `Active` olmasını gerektirir. V1'de Admin yetkisi kullanıcı/rol, danışman ataması, egzersiz ve `GymEquipment` yönetimiyle sınırlıdır.
 
 ---
 
@@ -531,6 +533,8 @@ Yetki:
 User
 ```
 
+V1'de yalnızca `Active` ilişkiler döner; kullanıcı onayı veya davet durumu yoktur.
+
 Response:
 
 ```json
@@ -576,6 +580,8 @@ Yetki:
 Trainer
 ```
 
+Yalnızca `Active` `UserAdvisor` ilişkileri listelenir.
+
 Response:
 
 ```json
@@ -604,6 +610,20 @@ Yetki:
 Dietitian
 ```
 
+Yalnızca `Active` `UserAdvisor` ilişkileri listelenir.
+
+Admin, atama ekranında danışman adaylarını mevcut `GET /api/users?role=Trainer` veya `?role=Dietitian` çağrılarıyla bulur.
+
+## 11.3.1 Admin'in Kullanıcı-Danışman İlişkilerini Getirmesi
+
+```http
+GET /api/user-advisors?userId={userId}
+```
+
+Yetki: `Admin`. Yanıt, seçilen kullanıcının `Active`, `Ended` ve `Cancelled` ilişkilerini `userAdvisorId`, `advisorId`, `advisorType`, `status`, `startDate` ve `endDate` alanlarıyla listeler. Bu liste Admin'in mevcut atamayı görüp sonlandırması içindir.
+
+Response DTO: `UserAdvisorResponse[]`. Her öğe ayrıca `userId` içerir. `GET /api/users?role=Trainer` ve `?role=Dietitian` ile seçilen danışmanların rolleri backend tarafından doğrulanır.
+
 ---
 
 ## 11.4 Kullanıcıya Danışman Ata
@@ -624,6 +644,8 @@ Request DTO:
 CreateUserAdvisorRequest
 ```
 
+Response DTO: `UserAdvisorResponse`.
+
 Request:
 
 ```json
@@ -640,6 +662,20 @@ Response:
 ```http
 201 Created
 ```
+
+```json
+{
+  "userAdvisorId": "7ec2ad83-3713-49bd-940c-d416589f850f",
+  "userId": "9a97f2b9-2a82-45bd-b7f9-ae24fb73441d",
+  "advisorId": "432d325b-f07d-42df-b175-012657c8be9c",
+  "advisorType": "Trainer",
+  "status": "Active",
+  "startDate": "2026-10-20",
+  "endDate": null
+}
+```
+
+V1'de atama yalnızca Admin tarafından yapılır ve doğrudan `Active` oluşturulur. `startDate` atama günüdür; gelecekte tarihli davet/planlı aktivasyon V1'de yoktur. Aynı kullanıcı-danışman çifti için ikinci aktif ilişki oluşturulamaz (`409 Conflict`).
 
 ---
 
@@ -664,6 +700,8 @@ Request:
 }
 ```
 
+V1'de `status` yalnızca `Ended` veya `Cancelled` olabilir. `endDate` zorunludur; `Pending` ve kullanıcı onayı akışı yoktur. Başarı yanıtı `200 OK` ile güncel ilişkiyi döner.
+
 ---
 
 # 12. ADVISOR NOTE ENDPOINTLERİ
@@ -687,7 +725,6 @@ Yetki:
 ```text
 User: yalnızca kendi notları
 Trainer/Dietitian: yalnızca bağlı danışan
-Admin
 ```
 
 ---
@@ -755,7 +792,6 @@ Yetki:
 ```text
 Assigned Trainer
 Assigned Dietitian
-Admin
 ```
 
 ---
@@ -802,7 +838,6 @@ Yetki:
 ```text
 Task Owner User
 Task Creator Advisor
-Admin
 ```
 
 Request:
@@ -902,6 +937,8 @@ Yetki:
 User
 ```
 
+Liste, `isActive`, `startDate` ve `endDate` alanlarını taşır. V1'de kullanıcı başına en fazla bir aktif `WorkoutPlan` bulunur; geçerli tarih aralığı dışındaki plan bugünkü antrenman sayılmaz.
+
 ---
 
 ## 15.2 Danışanın Programlarını Getir
@@ -914,7 +951,6 @@ Yetki:
 
 ```text
 Assigned Trainer
-Admin
 ```
 
 ---
@@ -930,7 +966,6 @@ Yetki:
 ```text
 Owner User
 Assigned Trainer
-Admin
 ```
 
 Response örneği:
@@ -950,6 +985,7 @@ Response örneği:
       "id": "27635ace-c211-4cfb-a340-c356701e6e43",
       "name": "Push",
       "dayNumber": 1,
+      "weekday": "Monday",
       "exercises": [
         {
           "id": "435d9193-fb1e-493d-bd80-c0f30ce84449",
@@ -1002,6 +1038,7 @@ Request:
     {
       "name": "Push",
       "dayNumber": 1,
+      "weekday": "Monday",
       "description": null,
       "exercises": [
         {
@@ -1026,6 +1063,8 @@ Response:
 201 Created
 ```
 
+`weekday` zorunludur ve `Monday`–`Sunday` string değerlerinden biridir. `dayNumber` yalnızca program içi sıralamadır. Aynı plandaki iki gün aynı `weekday` değerini alamaz (`400 Bad Request`). V1'de yeni aktif plan önceki aktif planı pasifleştirir. `PUT /api/workout-plans/{workoutPlanId}` aynı gün benzersizliği ve tarih aralığı kuralını korur.
+
 ---
 
 ## 15.5 Program Güncelle
@@ -1038,7 +1077,6 @@ Yetki:
 
 ```text
 Creator Trainer
-Admin
 ```
 
 ---
@@ -1185,7 +1223,6 @@ Yetki:
 ```text
 Assigned Trainer
 Assigned Dietitian
-Admin
 ```
 
 ---
@@ -1233,7 +1270,6 @@ Yetki:
 ```text
 Assigned Trainer
 Assigned Dietitian
-Admin
 ```
 
 ---
@@ -1246,6 +1282,8 @@ Admin
 GET /api/users/me/nutrition-goals/active
 ```
 
+Opsiyonel `date=YYYY-MM-DD` query parametresi mobil cihazın yerel takvim tarihidir; mobil V1'de gönderir. Parametre yoksa sunucunun UTC takvim tarihi kullanılır. `IsActive = true` olan tek hedefin tarih aralığı bu tarihi kapsıyorsa döner; aksi halde `404 Not Found` döner. Mobil `Planım` ve günlük beslenme ekranı yalnızca bu endpointteki hedefi kullanır.
+
 Response:
 
 ```json
@@ -1256,6 +1294,7 @@ Response:
   "carbohydrateGrams": 270,
   "fatGrams": 75,
   "waterMl": 2500,
+  "isActive": true,
   "startDate": "2026-11-01",
   "endDate": "2026-11-30"
 }
@@ -1273,7 +1312,6 @@ Yetki:
 
 ```text
 Assigned Dietitian
-Admin
 ```
 
 ---
@@ -1305,6 +1343,8 @@ Request:
   "endDate": "2026-11-30"
 }
 ```
+
+Başarı: `201 Created`; yanıt oluşturulan `NutritionGoal` kaydını 19.1'deki alanlarla ve `isActive: true` değeriyle döner. V1'de yeni hedef doğrudan aktif oluşturulur; aynı kullanıcının önceki aktif `NutritionGoal` kaydı aynı veritabanı işleminde pasifleştirilir. Kullanıcı başına en fazla bir aktif hedef vardır. `startDate`/`endDate` geçerlilik aralığı dışında mobilde günlük hedef gösterilmez; eski hedef otomatik olarak yeniden etkinleşmez.
 
 ---
 
@@ -1383,6 +1423,8 @@ Request:
 }
 ```
 
+Kullanıcı analiz sonucunu onaylamadan `NutritionRecord` oluşturulmaz. `foodRecognitionLogId`, ham `FoodRecognitionLog` kaydını gösterir; kullanıcı düzeltmeleri yalnızca `NutritionRecord` alanlarına yazılır. AI yanıtındaki çoklu `items` tek öğün kaydına dönüştürülür; `name` ve toplam değerler kullanıcı tarafından son kez onaylanır.
+
 ---
 
 ## 20.4 Diyetisyenin Danışan Beslenme Kayıtlarını Görmesi
@@ -1395,7 +1437,6 @@ Yetki:
 
 ```text
 Assigned Dietitian
-Admin
 ```
 
 ---
@@ -1460,7 +1501,6 @@ Yetki:
 
 ```text
 Assigned Trainer
-Admin
 ```
 
 Diyetisyen erişimi gerekiyorsa ilişki yetkileri üzerinden ayrıca açılabilir.
@@ -1468,6 +1508,8 @@ Diyetisyen erişimi gerekiyorsa ilişki yetkileri üzerinden ayrıca açılabili
 ---
 
 # 22. ACTIVITY RECORD ENDPOINTLERİ
+
+Health Connect/HealthKit → Flutter (kullanıcı izniyle okuma) → ASP.NET Core API → PostgreSQL. Sağlık platformu ve akıllı cihaz backend'e doğrudan bağlanmaz.
 
 ## 22.1 Günlük Aktivite Özeti
 
@@ -1509,6 +1551,7 @@ Request:
 # 23. HEALTH DATA ENDPOINTLERİ
 
 Health Connect / HealthKit verilerinin toplu senkronizasyonu için:
+Flutter cihazdaki kullanıcı iznini kontrol eder ve okuduğu veriyi bu API'ye gönderir; backend yalnızca kimliği doğrulanmış kullanıcının kayıtlarını saklar.
 
 ## 23.1 Sağlık Verilerini Toplu Gönder
 
@@ -1589,6 +1632,8 @@ Response:
   "name": "Lat Pulldown",
   "modelKey": "lat_pulldown",
   "description": "Back training equipment",
+  "imageUrl": null,
+  "isActive": true,
   "exercises": [
     {
       "id": "50d0d5fd-f734-423f-be54-d14ce95d0176",
@@ -1611,6 +1656,29 @@ Yetki:
 ```text
 Admin
 ```
+
+Request DTO: `CreateGymEquipmentRequest`.
+
+```json
+{
+  "name": "Lat Pulldown",
+  "modelKey": "lat_pulldown",
+  "description": "Back training equipment",
+  "imageUrl": null,
+  "isActive": true,
+  "exerciseIds": ["50d0d5fd-f734-423f-be54-d14ce95d0176"]
+}
+```
+
+`exerciseIds`, var olan `Exercise` kayıtlarına kurulan `EquipmentExercise` eşleştirmelerini belirler. Başarı: `201 Created`, yanıt `GymEquipmentResponse` (24.2'deki detay yapısı).
+
+## 24.4 Ekipman Güncelle
+
+```http
+PUT /api/gym-equipments/{gymEquipmentId}
+```
+
+Yetki: `Admin`. Request DTO: `UpdateGymEquipmentRequest`; 24.3'teki alanları ve `exerciseIds` listesini taşır. Var olan `GymEquipment` kaydını ve `EquipmentExercise` eşleştirmelerini günceller. `modelKey` AI tahminiyle eşleştiği için diğer kayıtlarla çakışamaz (`409 Conflict`). Başarı: `200 OK`, yanıt `GymEquipmentResponse` (24.2'deki detay yapısı).
 
 ---
 
@@ -1676,6 +1744,8 @@ Response:
 Önemli:
 
 AI servisi yalnızca tahmin üretir.
+
+Görüntü önce Flutter'dan ASP.NET Core API'ye gider; backend FastAPI model sonucunu `GymEquipment.ModelKey` ile eşleştirir ve `EquipmentExercise` kayıtlarından egzersizleri ekleyerek Flutter'a döner. Flutter FastAPI'ye doğrudan bağlanmaz.
 
 ```text
 Lat Pulldown
@@ -1751,6 +1821,8 @@ Response:
 - Kullanıcı sonucu kaydetmeden önce düzenleyebilmelidir.
 - Düzeltilen sonuç daha sonra `NutritionRecord` olarak kaydedilir.
 - AI çıktısı tıbbi veya klinik doğruluk iddiası taşımaz.
+- Görüntü Flutter → ASP.NET Core API → Python FastAPI → AI Model yolunu izler; tahmin backend üzerinden Flutter'a döner. Flutter FastAPI'ye doğrudan bağlanmaz.
+- `FoodRecognitionLog.DetectedItems`, `items` listesini; logun `EstimatedCalories` ve makro alanları `totals` değerlerini temsil eder. Kullanıcı düzeltmesi ham logu değiştirmez.
 
 ---
 
@@ -1761,6 +1833,8 @@ Mobil ana sayfa için client'ın çok sayıda endpoint çağırmasını azaltmak
 ```http
 GET /api/users/me/dashboard
 ```
+
+Opsiyonel `date=YYYY-MM-DD` query parametresi, mobil cihazın yerel takvim tarihini belirtir. Mobil V1'de bu parametreyi gönderir; parametre yoksa sunucunun UTC takvim tarihi kullanılır. `todayWorkout`, o tarihte aktif ve tarih aralığı geçerli olan tek `WorkoutPlan` içindeki `Weekday` eşleşmesinden hesaplanır. Eşleşme yoksa `todayWorkout: null` döner. Aynı tarih için `nutrition` hedefi de yalnızca geçerli aktif `NutritionGoal` üzerinden hesaplanır; hedef yoksa hedef alanları `null` olur.
 
 Yetki:
 
@@ -1906,28 +1980,32 @@ veya uygun validation response ile dönmelidir.
 |---|---|---|---|---|
 | Kendi profilini görme | ✓ | ✓ | ✓ | ✓ |
 | Kendi profilini güncelleme | ✓ | ✓ | ✓ | ✓ |
-| Kendi danışmanlarını görme | ✓ | - | - | ✓ |
-| Danışan listesini görme | - | ✓ | ✓ | ✓ |
+| Kendi danışmanlarını görme | ✓ | - | - | - |
+| Danışan listesini görme | - | ✓ | ✓ | - |
 | UserAdvisor oluşturma | - | - | - | ✓ |
-| WorkoutPlan oluşturma | - | ✓ | - | ✓ |
-| Kendi WorkoutPlan'ını görme | ✓ | - | - | ✓ |
-| Danışan WorkoutPlan'ını görme | - | ✓ | - | ✓ |
-| NutritionGoal oluşturma | - | - | ✓ | ✓ |
-| Kendi NutritionGoal'ını görme | ✓ | - | - | ✓ |
-| NutritionRecord oluşturma | ✓ | - | - | ✓ |
-| Danışan NutritionRecord görme | - | Opsiyonel | ✓ | ✓ |
-| WeightRecord oluşturma | ✓ | - | - | ✓ |
-| Danışan WeightRecord görme | - | ✓ | ✓ | ✓ |
-| UserTask oluşturma | - | ✓ | ✓ | ✓ |
-| Kendi task'ını tamamlama | ✓ | - | - | ✓ |
-| RunningActivity oluşturma | ✓ | - | - | ✓ |
-| Danışan RunningActivity görme | - | ✓ | Yetkiye bağlı | ✓ |
-| Food Recognition | ✓ | - | - | ✓ |
-| Equipment Recognition | ✓ | - | - | ✓ |
+| UserAdvisor listeleme/sonlandırma | - | - | - | ✓ |
+| Kullanıcıları görme / rollerini yönetme | - | - | - | ✓ |
+| WorkoutPlan oluşturma | - | ✓ | - | - |
+| Kendi WorkoutPlan'ını görme | ✓ | - | - | - |
+| Danışan WorkoutPlan'ını görme | - | ✓ | - | - |
+| NutritionGoal oluşturma | - | - | ✓ | - |
+| Kendi NutritionGoal'ını görme | ✓ | - | - | - |
+| NutritionRecord oluşturma | ✓ | - | - | - |
+| Danışan NutritionRecord görme | - | - | ✓ | - |
+| WeightRecord oluşturma | ✓ | - | - | - |
+| Danışan WeightRecord görme | - | ✓ | ✓ | - |
+| UserTask oluşturma | - | ✓ | ✓ | - |
+| Kendi task'ını tamamlama | ✓ | - | - | - |
+| RunningActivity oluşturma | ✓ | - | - | - |
+| Danışan RunningActivity görme | - | ✓ | - | - |
+| Egzersiz kataloğunu yönetme | - | - | - | ✓ |
+| GymEquipment kataloğunu yönetme | - | - | - | ✓ |
+| Food Recognition | ✓ | - | - | - |
+| Equipment Recognition | ✓ | - | - | - |
 
 Not:
 
-Kesin izinler gerektiğinde `UserAdvisor` ilişkisindeki permission alanları ile daha ayrıntılı hale getirilebilir.
+Trainer/Dietitian için danışan okuma ve yazma yetkileri yalnızca `Active` `UserAdvisor` ilişkisiyle geçerlidir. V1'de ilişkiye ek permission alanları kullanılmaz; Admin'in kişisel sağlık/veri ekranlarına erişimi bu yönetim kapsamına dahil değildir.
 
 ---
 
@@ -2061,6 +2139,7 @@ GET    /api/users/me/dashboard
 GET    /api/users/me/advisors
 GET    /api/trainers/me/clients
 GET    /api/dietitians/me/clients
+GET    /api/user-advisors?userId={userId}
 POST   /api/user-advisors
 PATCH  /api/user-advisors/{userAdvisorId}
 ```
@@ -2159,6 +2238,7 @@ GET    /api/users/me/health-data-records
 GET    /api/gym-equipments
 GET    /api/gym-equipments/{gymEquipmentId}
 POST   /api/gym-equipments
+PUT    /api/gym-equipments/{gymEquipmentId}
 ```
 
 ## AI

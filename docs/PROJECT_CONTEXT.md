@@ -1,4 +1,4 @@
-# Yapay Zekâ Destekli Sağlıklı Yaşam ve Danışmanlık Platformu
+# Yapay Zekâ Destekli Sağlık ve Fitness Platformu
 
 ## 1. Proje Özeti
 
@@ -131,9 +131,8 @@ Temel yetenekleri:
 - Gerekirse kullanıcıya trainer veya diyetisyen atama
 - Egzersiz kayıtlarını yönetme
 - Spor ekipmanı kayıtlarını yönetme
-- Temel sistem yönetimi
 
-Admin paneli V1 kapsamında sade tutulacaktır.
+Admin paneli V1 kapsamında bu beş alanla sınırlıdır: kullanıcıları görüntüleme, roller, `UserAdvisor` atamaları, egzersiz ve `GymEquipment` yönetimi.
 
 ---
 
@@ -175,6 +174,8 @@ EndDate
 Status
 ```
 
+V1'de yalnızca Admin atama yapar. Davet veya kullanıcı onayı yoktur: yeni `UserAdvisor` kaydı doğrudan `Active` olur; daha sonra `Ended` veya `Cancelled` yapılabilir.
+
 İleride gerekli olması halinde ilişkiye yetki alanları da eklenebilir:
 
 ```text
@@ -192,11 +193,11 @@ CanViewActivity
 Web panelindeki en önemli akışlardan biri trainer/diyetisyen ile kullanıcı arasındaki danışmanlık ilişkisidir.
 
 ```text
-Admin / Yetkili
+Admin
       ↓
 Kullanıcıya Trainer veya Diyetisyen Atar
       ↓
-UserAdvisor Kaydı
+Active UserAdvisor Kaydı
       ↓
 Trainer / Diyetisyen Danışanı Görür
       ↓
@@ -243,6 +244,8 @@ PostgreSQL
 ```
 
 Mobil ve web uygulamaları PostgreSQL'e doğrudan bağlanmamalıdır.
+
+Flutter, Python FastAPI'ye doğrudan bağlanmaz; tüm AI istekleri ASP.NET Core API üzerinden geçer.
 
 AI işlemlerinde:
 
@@ -346,7 +349,6 @@ Profil ve ayarlar ana alt menüye eklenmek yerine sağ üstteki kullanıcı/avat
 - Bugünkü koşu / son aktivite
 - Trainer tarafından verilen yeni görev
 - Diyetisyen tarafından verilen yeni hedef/not
-- Son AI analizleri
 
 ## 8.2 Planım
 
@@ -362,6 +364,8 @@ Bu ekran trainer ve diyetisyen tarafından kullanıcıya atanan içeriklerin mer
 - Tamamlandı işaretleme
 - Geçmiş antrenmanlar
 
+V1'de aktif `WorkoutPlan` içindeki her `WorkoutDay`, `Weekday` ile tek bir haftanın gününe atanır. Aynı planda aynı güne ikinci antrenman atanmaz. Bugünkü antrenman, aktif planın geçerli tarih aralığında bugünün haftanın günüyle eşleşen gündür; planın tarih aralığı dışındaysa veya eşleşen gün yoksa gösterilmez.
+
 ### Beslenme
 - Günlük kalori hedefi
 - Protein hedefi
@@ -370,6 +374,8 @@ Bu ekran trainer ve diyetisyen tarafından kullanıcıya atanan içeriklerin mer
 - Diyetisyen notları
 - Beslenme hedefleri
 - Öğün kayıtları
+
+Bir kullanıcı için aynı anda yalnızca bir aktif `NutritionGoal` bulunur. Yeni hedef etkinleştirildiğinde eski aktif hedef pasifleştirilir. Planım ve günlük beslenme ekranı bu aktif hedefi kullanır.
 
 ### Görevler
 - Trainer görevleri
@@ -497,7 +503,7 @@ Dashboard
 Danışanlar
 Beslenme Hedefleri
 Görevler / Notlar
-Raporlar
+İlerleme (Danışan Detayı içinde)
 Profil
 ```
 
@@ -581,7 +587,9 @@ Health Connect
         ↓
 Flutter
         ↓
-ASP.NET Core
+ASP.NET Core API
+        ↓
+PostgreSQL
 ```
 
 iOS:
@@ -593,7 +601,9 @@ Apple Health / HealthKit
         ↓
 Flutter
         ↓
-ASP.NET Core
+ASP.NET Core API
+        ↓
+PostgreSQL
 ```
 
 İlk aşamada hedeflenen veriler:
@@ -606,6 +616,7 @@ ASP.NET Core
 - Aktivite süresi
 
 Tüm erişimler kullanıcı izinlerine bağlı olmalıdır.
+Akıllı cihaz ve sağlık platformu backend'e doğrudan bağlanmaz; veriyi izinle Flutter okur ve API'ye gönderir.
 
 ---
 
@@ -629,7 +640,6 @@ WorkoutExercises
 WorkoutSessions
 WorkoutLogs
 
-AdvisorAssignments
 AdvisorNotes
 UserTasks
 
@@ -670,13 +680,13 @@ Flutter → Register → ASP.NET Core → PostgreSQL
 ## 13.2 Trainer Program Atama
 
 ```text
-Trainer → Web Panel → Danışanı Seç → Workout Plan → Kaydet / Ata → API → Mobil Planım
+Trainer → Web Panel → Danışanı Seç → WorkoutPlan ve günlerin Weekday değeri → Kaydet / Ata → API → Mobil Planım
 ```
 
 ## 13.3 Diyetisyen Hedef Atama
 
 ```text
-Dietitian → Web Panel → Danışanı Seç → Kalori / Makro Hedefi → Görev / Not → API → Mobil Planım
+Dietitian → Web Panel → Danışanı Seç → NutritionGoal → API (önceki aktif hedefi pasifleştirir) → Mobil Planım
 ```
 
 ## 13.4 Antrenman Tamamlama
@@ -688,7 +698,7 @@ Mobil → Planım → Bugünkü Antrenman → Tamamlandı → WorkoutLog → Tra
 ## 13.5 Yemek Analizi
 
 ```text
-Mobil Kamera → Yemek Fotoğrafı → AI → Kalori / Makro Tahmini → Kullanıcı Düzeltmesi → NutritionRecord
+Flutter Kamera → ASP.NET Core API → Python FastAPI → AI Model → ASP.NET Core → Flutter'da kullanıcı düzeltmesi → NutritionRecord
 ```
 
 ## 13.6 Koşu Kaydı
@@ -860,7 +870,8 @@ project-root/
 │   ├── PROJECT_CONTEXT.md
 │   ├── NAMING_CONVENTIONS.md
 │   ├── DATA_DICTIONARY.md
-│   └── API_CONTRACT.md
+│   ├── API_CONTRACT.md
+│   └── UI_FLOW.md
 │
 ├── AGENTS.md
 ├── README.md
@@ -892,6 +903,7 @@ Codex geliştirme yapmadan önce:
 3. `docs/NAMING_CONVENTIONS.md`
 4. `docs/DATA_DICTIONARY.md`
 5. `docs/API_CONTRACT.md`
+6. `docs/UI_FLOW.md`
 
 dosyalarını dikkate almalıdır.
 
@@ -1149,4 +1161,4 @@ Finale yaklaşıldığında öncelik test, bug fix, deployment, dokümantasyon, 
 
 # 25. Kısa Proje Tanımı
 
-> **Yapay Zekâ Destekli Sağlıklı Yaşam ve Danışmanlık Platformu**, kullanıcıların antrenman, beslenme, kilo, vücut gelişimi, koşu ve günlük aktivite verilerini takip edebildiği; aynı zamanda trainer ve diyetisyenlerden plan, hedef ve görev alabildiği mobil ve web tabanlı bir sistemdir. Platform, yemek fotoğrafından tahmini kalori/makro analizi ve spor salonu ekipmanı tanıma özellikleri için yapay zekâ modülleri içerir. Kullanıcı mobil uygulama üzerinden günlük sürecini yönetirken trainer ve diyetisyenler web panelinden danışanlarını takip eder ve ilgili planları oluşturur. Sistem Flutter, React + TypeScript, ASP.NET Core, PostgreSQL ve Python/FastAPI teknolojileriyle geliştirilecektir.
+> **Yapay Zekâ Destekli Sağlık ve Fitness Platformu**, kullanıcıların antrenman, beslenme, kilo, vücut gelişimi, koşu ve günlük aktivite verilerini takip edebildiği; aynı zamanda trainer ve diyetisyenlerden plan, hedef ve görev alabildiği mobil ve web tabanlı bir sistemdir. Platform, yemek fotoğrafından tahmini kalori/makro analizi ve spor salonu ekipmanı tanıma özellikleri için yapay zekâ modülleri içerir. Kullanıcı mobil uygulama üzerinden günlük sürecini yönetirken trainer ve diyetisyenler web panelinden danışanlarını takip eder ve ilgili planları oluşturur. Sistem Flutter, React + TypeScript, ASP.NET Core, PostgreSQL ve Python/FastAPI teknolojileriyle geliştirilecektir.
