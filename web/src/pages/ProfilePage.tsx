@@ -40,6 +40,13 @@ export function ProfilePage() {
         </div>
       </div>
       <section className="panel profile-panel">
+        {userId && role === 'Trainer' && data && !loading && !error && (
+          <div className="profile-actions">
+            <Link className="button primary" to={`/programlar/${userId}`}>
+              Antrenman programları
+            </Link>
+          </div>
+        )}
         {loading || error ? (
           <PageState loading={loading} error={error} retry={retry} />
         ) : (

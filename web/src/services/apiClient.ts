@@ -68,7 +68,7 @@ export function acceptSessionTokens(value: unknown) {
   setSessionTokens(value);
 }
 
-async function send<T>(path: string, options: RequestInit): Promise<T> {
+async function send<T>(path: string, options: RequestInit, allowEmptyResponse = false): Promise<T> {
   let response: Response;
   try {
     response = await fetch(`${baseUrl}${path}`, options);
@@ -79,11 +79,18 @@ async function send<T>(path: string, options: RequestInit): Promise<T> {
     });
   }
   if (response.status === 204) return undefined as T;
-  const body: unknown = await response.json().catch(() => null);
+  const rawBody = await response.text();
+  let body: unknown = null;
+  try {
+    body = JSON.parse(rawBody);
+  } catch {
+    /* Hatalı veya boş yanıt aşağıda değerlendirilir. */
+  }
   if (!response.ok) {
     const problem = body && typeof body === 'object' ? (body as ProblemDetails) : {};
     throw new ApiError(response.status, { ...problem, status: response.status });
   }
+  if (allowEmptyResponse && !rawBody.trim()) return undefined as T;
   if (body === null) throw new ApiError(502, { detail: 'Sunucunun yanıtı okunamadı.' });
   return body as T;
 }
@@ -122,19 +129,20 @@ export async function refreshSession(): Promise<void> {
 
 export async function apiRequest<T>(
   path: string,
-  options: RequestInit = {},
+  options: RequestInit & { allowEmptyResponse?: boolean } = {},
   authenticated = true,
 ): Promise<T> {
   const version = sessionVersion;
   const accessToken = tokens?.accessToken;
+  const { allowEmptyResponse = false, ...requestOptions } = options;
   const buildOptions = (): RequestInit => {
-    const headers = new Headers(options.headers);
-    if (options.body) headers.set('Content-Type', 'application/json');
+    const headers = new Headers(requestOptions.headers);
+    if (requestOptions.body) headers.set('Content-Type', 'application/json');
     if (authenticated && tokens) headers.set('Authorization', `Bearer ${tokens.accessToken}`);
-    return { ...options, headers };
+    return { ...requestOptions, headers };
   };
   try {
-    return await send<T>(path, buildOptions());
+    return await send<T>(path, buildOptions(), allowEmptyResponse);
   } catch (error) {
     if (
       !authenticated ||
@@ -146,7 +154,7 @@ export async function apiRequest<T>(
     if (version !== sessionVersion) throw error;
     if (tokens?.accessToken === accessToken) await refreshSession();
     try {
-      return await send<T>(path, buildOptions());
+      return await send<T>(path, buildOptions(), allowEmptyResponse);
     } catch (retryError) {
       if (
         retryError instanceof ApiError &&
