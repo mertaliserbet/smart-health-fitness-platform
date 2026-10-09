@@ -17,6 +17,8 @@ if (app.Environment.IsDevelopment())
     app.UseCors(ServiceCollectionExtensions.DevelopmentCorsPolicy);
 }
 
+app.UseAuthentication();
+app.UseAuthorization();
 app.MapControllers();
 
 app.Run();

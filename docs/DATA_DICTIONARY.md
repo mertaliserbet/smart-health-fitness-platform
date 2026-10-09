@@ -77,6 +77,10 @@ Not:
 
 Kilo doğrudan `User` içinde tutulmamalıdır. Kilo geçmişi `WeightRecord` üzerinden yönetilmelidir.
 
+Auth uygulamasında `Email`, baştaki/sondaki boşlukları kaldırılmış ve invariant küçük harfe dönüştürülmüş olarak saklanır; benzersiz indeks aynı e-postayla eşzamanlı kaydı da engeller. `FirstName`/`LastName` en fazla 100, `Email` 254, `PasswordHash` 512 karakterdir. `PasswordHash`, ASP.NET Core `PasswordHasher<User>` tarafından salt ile PBKDF2 kullanılarak üretilir; düz parola saklanmaz.
+
+`PhoneNumber`, `BirthDate`, `Gender`, `HeightCm` ve `UpdatedAt` nullable'dır; public kayıt bu profil alanlarını doldurmaz. `BirthDate` yalnızca tarihtir (`DateOnly`), `HeightCm` nullable decimal'dir. `CreatedAt`/`UpdatedAt` UTC tarih/saatidir. Yeni kullanıcı `IsActive = true` oluşturulur; pasif kullanıcı login/refresh yapamaz ve access token ile korunan endpointlere erişemez. Bu aşamada profil güncelleme akışı yoktur.
+
 ---
 
 # 3. Role
@@ -118,6 +122,32 @@ RoleId
 ```
 
 Bir kullanıcı birden fazla role sahip olabilir.
+
+`Role.Name` benzersizdir. Migration yalnızca `User`, `Trainer`, `Dietitian`, `Admin` rol kayıtlarını ekler; yönetici veya danışman hesabı oluşturmaz. `UserRole` için `(UserId, RoleId)` benzersizdir. Public register yalnızca `User` ilişkisi oluşturur; istemci rol seçemez. Ayrı bir `UserRole` enum'u oluşturulmaz; rol değerleri `Role.Name` ile temsil edilir.
+
+## 4.1 RefreshToken
+
+**Amaç:** Kullanıcının access token yenileme yetkisini ve token'ın kullanım durumunu tutar.
+
+**Tablo:** `refresh_tokens`
+
+```text
+Id
+UserId
+TokenHash
+CreatedAt
+ExpiresAt
+RevokedAt
+```
+
+- `Id`/`UserId`: Guid; `UserId`, mevcut `User` kaydını işaret eder.
+- `TokenHash`: Kriptografik rastgele üretilen refresh token'ın SHA-256 hash'i; 64 karakter ve benzersizdir. Ham refresh token yalnızca login/refresh yanıtında istemciye verilir; veritabanında veya loglarda saklanmaz.
+- `CreatedAt`, `ExpiresAt`: Zorunlu UTC tarih/saatidir.
+- `RevokedAt`: Nullable UTC tarih/saatidir; doluysa token kullanılamaz.
+- Kullanılabilir token: `RevokedAt == null`, `ExpiresAt > now` ve ilgili `User.IsActive == true`.
+- Refresh sırasında eski token tüketilir ve yeni token oluşturulur. Koşullu UPDATE ve transaction, eşzamanlı iki isteğin aynı token'ı kullanmasını engeller; yalnızca biri başarılı olur.
+- Logout yalnızca giriş yapmış kullanıcının kendi refresh token'ını iptal eder. Access token ayrı olarak iptal edilmez; kısa geçerlilik süresi sonunda sona erer.
+- Bu auth kaydı business domain'lerinden bağımsızdır; Advisor/Workout/Nutrition vb. tabloları gerektirmez.
 
 ---
 
@@ -949,9 +979,11 @@ GymEquipmentRecognitionService
 
 ---
 
-# 33. Temel Enum'lar
+# 33. Temel Enum'lar ve Sabit Değerler
 
-## UserRole
+## Rol Adları (`Role.Name`)
+
+`UserRole` ilişki entity'sidir; aynı isimle ikinci bir enum oluşturulmaz. Auth rol değerleri `Role.Name` ve kodda `RoleNames` sabitleriyle temsil edilir.
 
 ```text
 User

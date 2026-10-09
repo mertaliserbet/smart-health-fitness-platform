@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using SmartHealthFitness.Api.Contracts;
 using SmartHealthFitness.Api.Data;
@@ -6,6 +7,7 @@ using SmartHealthFitness.Api.Data;
 namespace SmartHealthFitness.Api.Controllers;
 
 [ApiController]
+[AllowAnonymous]
 [Route("api/health")]
 public sealed class HealthController(AppDbContext dbContext) : ControllerBase
 {

@@ -78,6 +78,12 @@ Dietitian
 Admin
 ```
 
+Auth temelinde JWT imzası (HS256), issuer, audience ve süre backend tarafından doğrulanır. `sub` claim'i `User.Id`, `role` claim'leri `Role.Name` değerleridir; `jti` ve `iat` de bulunur. Rol değerleri yalnızca veritabanından alınır. `User`, `Trainer`, `Dietitian`, `Admin` isimli authorization policy'leri ilgili rolü gerektirir; `[Authorize(Roles = "Admin")]` veya `[Authorize(Policy = "Admin")]` kullanılabilir. Yeni endpointler varsayılan olarak authentication gerektirir; public endpointler `[AllowAnonymous]` ile işaretlenir.
+
+Access token ile korunan isteklerde kullanıcının hâlâ var ve aktif olduğu kontrol edilir. Rol claim'leri token üretildiği andaki rollerdir; değişiklikler yeni login/refresh ile alınır. Varsayılan access süresi 15 dakika, refresh süresi 7 gündür; configuration üzerinden ayarlanır. Geçerlilik kontrolünde 5 saniye clock skew toleransı vardır. JWT secret repository'de tutulmaz (`JWT_SECRET` veya `Jwt:Secret`).
+
+Token veya kullanıcı bilgisi taşıyan auth ve `me` yanıtları `Cache-Control: no-store` ile gönderilir; istemci veya ara önbelleklerde saklanmamalıdır.
+
 Authorization yalnızca frontend üzerinde yapılmamalıdır. Backend her protected endpoint için rol ve sahiplik kontrolü yapmalıdır.
 `Assigned Trainer` ve `Assigned Dietitian`, ilgili `UserAdvisor` ilişkisinin `Active` olmasını gerektirir. V1'de Admin yetkisi kullanıcı/rol, danışman ataması, egzersiz ve `GymEquipment` yönetimiyle sınırlıdır.
 
@@ -274,6 +280,10 @@ Not:
 
 Normal kayıt olan kullanıcıya varsayılan olarak `User` rolü verilir.
 
+Response DTO: `RegisterResponse`. Register token üretmez; kullanıcı sonrasında login yapar. Yalnızca `firstName`, `lastName`, `email`, `password` kabul edilir. `roles`, `role` veya başka tanımsız alan göndermek `400 Bad Request` üretir; public istekle Trainer/Dietitian/Admin verilemez.
+
+Validation: ad/soyad boş olamaz ve en fazla 100 karakterdir; e-posta geçerli ve en fazla 254 karakterdir; parola 12–128 karakterdir ve kırpılmaz. Ad/soyad kırpılır, e-posta kırpılıp invariant küçük harfe dönüştürülür. Aynı normalize e-postayla kayıt `409 Conflict`; validation `400 Bad Request` ve `ValidationProblemDetails` döner.
+
 ---
 
 ## 8.2 Login
@@ -309,6 +319,8 @@ Response DTO:
 LoginResponse
 ```
 
+Başarı `200 OK`. E-posta register ile aynı şekilde normalize edilir. Hatalı e-posta/parola ve pasif hesap aynı genel `401 Unauthorized` `ProblemDetails` yanıtını üretir; hesabın varlığı açıklanmaz. Eksik alan, geçersiz e-posta veya 128 karakterden uzun parola `400 Bad Request` üretir. Access/refresh token'lar response dışında loglanmaz.
+
 Response:
 
 ```json
@@ -336,6 +348,8 @@ Response:
 POST /api/auth/refresh
 ```
 
+Yetki: `Public`; geçerli refresh token istek gövdesinde zorunludur. Request DTO: `RefreshTokenRequest`; response DTO: `RefreshTokenResponse`.
+
 Request:
 
 ```json
@@ -353,6 +367,8 @@ Response:
   "expiresAt": "2026-10-15T14:00:00Z"
 }
 ```
+
+Başarı `200 OK` döner. Refresh token tek kullanımlıdır: eski token iptal edilir, yeni access/refresh çifti döner. İstemci eski refresh token'ı yenisiyle değiştirmelidir. Geçersiz, süresi dolmuş, daha önce tüketilmiş veya pasif kullanıcıya ait token `401 Unauthorized` ve `ProblemDetails` üretir. Eşzamanlı aynı token kullanımında yalnızca bir istek başarılı olur. Eksik/boş veya 256 karakterden uzun token `400 Bad Request` üretir.
 
 ---
 
@@ -384,6 +400,8 @@ Response:
 
 Refresh token geçersiz hale getirilmelidir.
 
+Request DTO: `LogoutRequest`. Eksik/geçersiz access token `401`, başka kullanıcının refresh token'ını iptal etme girişimi `403` döner. Kendi token'ını tekrar iptal etme veya bilinmeyen token için işlem idempotent olarak `204` döner. Access token mevcut kısa süresi boyunca geçerlidir; logout refresh token üzerinden yeni access alınmasını engeller.
+
 ---
 
 # 9. USER / PROFILE ENDPOINTLERİ
@@ -399,6 +417,8 @@ Yetki:
 ```text
 Authenticated
 ```
+
+Response DTO: `UserProfileResponse`. Kullanıcı kimliği doğrulanmış JWT'nin `sub` claim'inden alınır; istemci kullanıcı ID'si seçemez. Başarı `200 OK`; token eksik/geçersiz/süresi dolmuşsa veya kullanıcı pasif/silinmişse `401 Unauthorized` ve `ProblemDetails` döner. Yanıtta parola/hash veya refresh token bulunmaz. Profil alanları bu aşamada yalnızca nullable mevcut alanlar olarak döner; profil güncelleme bu auth görevine dahil değildir.
 
 Response:
 

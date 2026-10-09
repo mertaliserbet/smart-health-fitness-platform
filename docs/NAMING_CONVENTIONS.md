@@ -885,13 +885,14 @@ AI çıktısı kullanıcıya doğrudan gösterilecek Türkçe metin olmak zorund
 Enum adı `PascalCase` olmalıdır.
 
 ```text
-UserRole
 AdvisorType
 TaskStatus
 WorkoutStatus
 RecognitionType
 Weekday
 ```
+
+`UserRole`, veri sözlüğündeki kullanıcı-rol ilişki entity'sidir; aynı adla enum oluşturulmaz. Auth rol değerleri `Role.Name` alanında, kod sabitleri `RoleNames` içinde tutulur.
 
 Enum değerleri de `PascalCase` kullanılmalıdır.
 
