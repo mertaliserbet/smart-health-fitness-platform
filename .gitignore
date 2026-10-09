@@ -6,6 +6,7 @@
 *.suo
 
 # Local configuration and credentials
+.local/
 .env
 .env.*
 !.env.example
