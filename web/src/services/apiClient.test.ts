@@ -25,6 +25,27 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe('API oturum akışı', () => {
+  it('sözleşmede gövdesiz olan 201 oluşturma yanıtını yalnız istenirse kabul eder', async () => {
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 201 }));
+    await expect(
+      apiRequest('/api/users/client/workout-plans', { method: 'POST', allowEmptyResponse: true }),
+    ).resolves.toBeUndefined();
+    expect(fetchMock.mock.calls[0][1]).not.toHaveProperty('allowEmptyResponse');
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 200 }));
+    await expect(apiRequest('/api/exercises')).rejects.toMatchObject({ status: 502 });
+  });
+
+  it('oluşturma yanıtındaki bozuk JSON veya HTTP hatasını başarı saymaz', async () => {
+    fetchMock.mockResolvedValueOnce(new Response('invalid-json', { status: 201 }));
+    await expect(apiRequest('/api/plans', { allowEmptyResponse: true })).rejects.toMatchObject({
+      status: 502,
+    });
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 403 }));
+    await expect(apiRequest('/api/plans', { allowEmptyResponse: true })).rejects.toMatchObject({
+      status: 403,
+    });
+  });
+
   it('bearer token gönderir, 401 sonrası tokenı yeniler ve isteği tekrarlar', async () => {
     acceptSessionTokens(oldTokens);
     fetchMock

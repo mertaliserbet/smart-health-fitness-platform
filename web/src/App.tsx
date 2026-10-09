@@ -8,6 +8,10 @@ import { LoginPage } from './pages/LoginPage';
 import { PanelSelection } from './pages/PanelSelection';
 import { PeopleList } from './pages/PeopleList';
 import { ProfilePage } from './pages/ProfilePage';
+import { ExerciseCatalog } from './pages/ExerciseCatalog';
+import { WorkoutPlans } from './pages/WorkoutPlans';
+import { WorkoutPlanCreate } from './pages/WorkoutPlanCreate';
+import { WorkoutPlanDetail } from './pages/WorkoutPlanDetail';
 import type { WebRole } from './types/api';
 
 function ProtectedRoute() {
@@ -40,6 +44,13 @@ export function App() {
             <Route path="/kullanicilar/:userId" element={<ProfilePage />} />
           </Route>
           <Route path="/profil" element={<ProfilePage />} />
+          <Route element={<RoleRoute allowed={['Trainer']} />}>
+            <Route path="/programlar" element={<WorkoutPlans />} />
+            <Route path="/programlar/:userId" element={<WorkoutPlans />} />
+            <Route path="/programlar/:userId/yeni" element={<WorkoutPlanCreate />} />
+            <Route path="/programlar/:userId/:workoutPlanId" element={<WorkoutPlanDetail />} />
+            <Route path="/egzersizler" element={<ExerciseCatalog />} />
+          </Route>
           <Route
             path="*"
             element={

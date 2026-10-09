@@ -32,6 +32,15 @@ export async function getUsers(
   return apiRequest<PagedResponse<UserSummary>>(`/api/users?page=${page}&pageSize=20`, { signal });
 }
 
+export async function requireTrainerClient(userId: string, demo: boolean, signal?: AbortSignal) {
+  const clients = await getClients('Trainer', demo, signal);
+  const client = clients.find(
+    (value) => value.id === userId && value.relationshipStatus === 'Active',
+  );
+  if (!client) throw new Error('Bu danışana erişiminiz bulunmuyor.');
+  return client;
+}
+
 export async function getUserProfile(id: string | undefined, demo: boolean, signal?: AbortSignal) {
   if (demo && import.meta.env.DEV) {
     const { demoProfiles } = await import('../demo/demoData');

@@ -1,5 +1,15 @@
 import { useState } from 'react';
-import { ChevronRight, LayoutDashboard, LogOut, Menu, UserRound, Users, X } from 'lucide-react';
+import {
+  ChevronRight,
+  ClipboardList,
+  Dumbbell,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  UserRound,
+  Users,
+  X,
+} from 'lucide-react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router';
 import { useAuth } from '../auth/AuthProvider';
 import { getWebRoles, roleLabels } from '../auth/roles';
@@ -17,9 +27,13 @@ export function AppLayout() {
     ? 'Danışanlar'
     : pathname.startsWith('/kullanicilar')
       ? 'Kullanıcılar'
-      : pathname === '/profil'
-        ? 'Profil'
-        : 'Dashboard';
+      : pathname.startsWith('/programlar')
+        ? 'Antrenman Programları'
+        : pathname.startsWith('/egzersizler')
+          ? 'Egzersizler'
+          : pathname === '/profil'
+            ? 'Profil'
+            : 'Dashboard';
   async function leave() {
     setLeaving(true);
     await signOut();
@@ -64,6 +78,18 @@ export function AppLayout() {
             <Users size={19} aria-hidden="true" />
             {admin ? 'Kullanıcılar' : 'Danışanlar'}
           </NavLink>
+          {role === 'Trainer' && (
+            <>
+              <NavLink to="/programlar">
+                <ClipboardList size={19} aria-hidden="true" />
+                Antrenman Programları
+              </NavLink>
+              <NavLink to="/egzersizler">
+                <Dumbbell size={19} aria-hidden="true" />
+                Egzersizler
+              </NavLink>
+            </>
+          )}
         </nav>
         <div className="sidebar-note">
           <div className="note-mark" />
