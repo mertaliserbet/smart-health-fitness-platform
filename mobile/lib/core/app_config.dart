@@ -20,10 +20,21 @@ class AppConfig {
     apiBaseUrl = uri.replace(path: '/');
   }
 
-  factory AppConfig.fromEnvironment() =>
-      AppConfig(const String.fromEnvironment('API_BASE_URL'));
+  factory AppConfig.fromEnvironment() {
+    const configuredUrl = String.fromEnvironment('API_BASE_URL');
+    // VS Code's default Android debug launch must also reach the login screen.
+    final useEmulatorDefault =
+        configuredUrl.isEmpty &&
+        kDebugMode &&
+        defaultTargetPlatform == TargetPlatform.android;
+    return AppConfig(
+      useEmulatorDefault ? androidDevelopmentUrl : configuredUrl,
+    );
+  }
 
   static const appName = 'Yapay Zekâ Destekli Sağlık ve Fitness Platformu';
   static const requestTimeout = Duration(seconds: 20);
+  static const storageTimeout = Duration(seconds: 5);
+  static const androidDevelopmentUrl = 'http://10.0.2.2:5000';
   late final Uri apiBaseUrl;
 }

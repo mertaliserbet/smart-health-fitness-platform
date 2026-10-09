@@ -15,7 +15,7 @@ void main() {
       TokenStore(server: config.apiBaseUrl.toString()),
     );
     runApp(SmartHealthFitnessApp(auth: AuthService(api)));
-  } on FormatException catch (error) {
+  } on Object catch (error) {
     runApp(
       MaterialApp(
         home: Scaffold(
@@ -23,7 +23,11 @@ void main() {
             child: Center(
               child: Padding(
                 padding: const EdgeInsets.all(24),
-                child: Text(error.message),
+                child: Text(
+                  error is FormatException
+                      ? error.message.toString()
+                      : 'Uygulama başlatılamadı. Uygulamayı kapatıp tekrar açın.',
+                ),
               ),
             ),
           ),

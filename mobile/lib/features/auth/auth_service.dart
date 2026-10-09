@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
@@ -22,6 +24,12 @@ class AuthService extends ChangeNotifier {
   String? error;
   String? notice;
   bool isBusy = false;
+  bool _disposed = false;
+
+  @override
+  void notifyListeners() {
+    if (!_disposed) super.notifyListeners();
+  }
 
   Future<void> restoreSession() async {
     status = AuthStatus.checking;
@@ -41,6 +49,13 @@ class AuthService extends ChangeNotifier {
     } on PlatformException {
       error = 'Güvenli oturum bilgilerine erişilemedi. Tekrar deneyin.';
       status = AuthStatus.retry;
+    } on TimeoutException {
+      error = 'Cihazdaki oturum bilgileri okunamadı. Tekrar deneyin.';
+      status = AuthStatus.retry;
+    } on Object catch (failure) {
+      debugPrint('Oturum açılışı başarısız: ${failure.runtimeType}');
+      error = 'Oturum kontrolü tamamlanamadı. Tekrar deneyin.';
+      status = api.hasSession ? AuthStatus.retry : AuthStatus.signedOut;
     }
     notifyListeners();
   }
@@ -66,6 +81,10 @@ class AuthService extends ChangeNotifier {
     } on PlatformException {
       throw const ApiException(
         'Oturum güvenli şekilde saklanamadı. Tekrar deneyin.',
+      );
+    } on Object {
+      throw const ApiException(
+        'Giriş tamamlanamadı. Cihazdaki oturum bilgilerini kontrol edip tekrar deneyin.',
       );
     }
   }
@@ -116,7 +135,7 @@ class AuthService extends ChangeNotifier {
       notice = revoked
           ? 'Çıkış yapıldı.'
           : 'Cihazdan çıkış yapıldı. Sunucuda oturum kapatılamadı; oturum süresi dolana kadar açık kalabilir.';
-    } on PlatformException {
+    } on Object {
       user = null;
       status = AuthStatus.retry;
       error = 'Cihazdaki oturum silinemedi. Çıkış işlemini tekrar deneyin.';
@@ -128,6 +147,7 @@ class AuthService extends ChangeNotifier {
 
   @override
   void dispose() {
+    _disposed = true;
     api.onSessionExpired = null;
     api.close();
     super.dispose();

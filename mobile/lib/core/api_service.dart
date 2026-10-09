@@ -204,9 +204,10 @@ class ApiService {
         if (accessToken != null) 'Authorization': 'Bearer $accessToken',
       });
       if (body != null) request.body = jsonEncode(body);
-      final response = await http.Response.fromStream(
-        await _client.send(request),
-      );
+      // Bound both headers and body, including clients that ignore abortTrigger.
+      final response = await (() async {
+        return http.Response.fromStream(await _client.send(request));
+      })().timeout(AppConfig.requestTimeout);
       Map<String, dynamic> json = {};
       if (response.bodyBytes.isNotEmpty) {
         try {
@@ -230,9 +231,11 @@ class ApiService {
       return json;
     } on http.RequestAbortedException {
       throw const ApiException('İstek zaman aşımına uğradı. Tekrar deneyin.');
+    } on TimeoutException {
+      throw const ApiException('İstek zaman aşımına uğradı. Tekrar deneyin.');
     } on http.ClientException {
       throw const ApiException(
-        'Sunucuya ulaşılamadı. İnternet bağlantınızı kontrol edin.',
+        'Sunucuya ulaşılamadı. Backend’in açık olduğunu ve API adresini kontrol edin.',
       );
     } finally {
       timer.cancel();

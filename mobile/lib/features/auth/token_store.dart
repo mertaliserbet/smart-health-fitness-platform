@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import '../../core/app_config.dart';
+
 class TokenPair {
   const TokenPair({
     required this.accessToken,
@@ -51,7 +53,9 @@ class TokenStore {
   final FlutterSecureStorage _storage;
   Future<void> _pending = Future.value();
 
-  Future<TokenPair?> read() async {
+  Future<TokenPair?> read() => _read().timeout(AppConfig.storageTimeout);
+
+  Future<TokenPair?> _read() async {
     await _pending;
     final value = await _storage.read(key: _key);
     if (value == null) return null;
@@ -74,6 +78,8 @@ class TokenStore {
   Future<void> _enqueue(Future<void> Function() operation) {
     final result = _pending.then((_) => operation());
     _pending = result.then((_) {}, onError: (Object _, StackTrace _) {});
-    return result;
+    // Keep the native operation in the queue even after the caller times out;
+    // a later delete must never be overtaken by an unfinished write.
+    return result.timeout(AppConfig.storageTimeout);
   }
 }
