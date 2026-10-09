@@ -2,7 +2,7 @@ import { ArrowLeft, CalendarDays, Dumbbell, Plus } from 'lucide-react';
 import { Link, useParams } from 'react-router';
 import { useAuth } from '../auth/AuthProvider';
 import { useLoad } from '../hooks/useLoad';
-import { requireTrainerClient } from '../services/clientService';
+import { requireClient } from '../services/clientService';
 import { getWorkoutPlan } from '../services/workoutService';
 import { PageState } from '../components/PageState';
 import { formatDate } from '../components/PeopleTable';
@@ -13,7 +13,7 @@ export function WorkoutPlanDetail() {
   const { demo } = useAuth();
   const { data, loading, error, retry } = useLoad(
     async (signal) => {
-      const client = await requireTrainerClient(userId, demo, signal);
+      const client = await requireClient(userId, 'Trainer', demo, signal);
       const plan = await getWorkoutPlan(workoutPlanId, demo, signal);
       if (plan.userId !== client.id) throw new Error('Bu program seçili danışana ait değil.');
       return { client, plan };

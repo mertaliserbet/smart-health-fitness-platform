@@ -1,4 +1,6 @@
 import type { CreateWorkoutPlanRequest, Weekday } from '../types/workout';
+import { isValidDate } from './date';
+export { localDate } from './date';
 
 export const weekdays: { value: Weekday; label: string }[] = [
   { value: 'Monday', label: 'Pazartesi' },
@@ -42,11 +44,6 @@ export interface WorkoutPlanDraft {
   days: WorkoutDayDraft[];
 }
 
-export function localDate() {
-  const date = new Date();
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-}
-
 export function newWorkoutDay(weekday: Weekday, number: number): WorkoutDayDraft {
   return {
     key: crypto.randomUUID(),
@@ -71,13 +68,9 @@ export function prepareWorkoutPlan(draft: WorkoutPlanDraft): {
 } {
   const errors: Record<string, string> = {};
   if (!draft.name.trim()) errors.name = 'Program adı gerekli.';
-  const validDate = (value: string) => {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
-    const parsed = new Date(`${value}T00:00:00Z`);
-    return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
-  };
-  if (!validDate(draft.startDate)) errors.startdate = 'Geçerli bir başlangıç tarihi seç.';
-  if (draft.endDate && !validDate(draft.endDate)) errors.enddate = 'Geçerli bir bitiş tarihi seç.';
+  if (!isValidDate(draft.startDate)) errors.startdate = 'Geçerli bir başlangıç tarihi seç.';
+  if (draft.endDate && !isValidDate(draft.endDate))
+    errors.enddate = 'Geçerli bir bitiş tarihi seç.';
   else if (draft.endDate && draft.endDate < draft.startDate)
     errors.enddate = 'Bitiş tarihi başlangıçtan önce olamaz.';
   if (!draft.days.length) errors.days = 'En az bir antrenman günü ekle.';

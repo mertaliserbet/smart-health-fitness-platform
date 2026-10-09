@@ -32,8 +32,13 @@ export async function getUsers(
   return apiRequest<PagedResponse<UserSummary>>(`/api/users?page=${page}&pageSize=20`, { signal });
 }
 
-export async function requireTrainerClient(userId: string, demo: boolean, signal?: AbortSignal) {
-  const clients = await getClients('Trainer', demo, signal);
+export async function requireClient(
+  userId: string,
+  role: Exclude<WebRole, 'Admin'>,
+  demo: boolean,
+  signal?: AbortSignal,
+) {
+  const clients = await getClients(role, demo, signal);
   const client = clients.find(
     (value) => value.id === userId && value.relationshipStatus === 'Active',
   );
