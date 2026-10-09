@@ -14,7 +14,9 @@ export function ProfilePage() {
     async (signal) => {
       if (userId && role && role !== 'Admin') {
         const clients = await getClients(role, demo, signal);
-        if (!clients.some((client) => client.id === userId))
+        if (
+          !clients.some((client) => client.id === userId && client.relationshipStatus === 'Active')
+        )
           throw new Error('Bu danışana erişiminiz bulunmuyor.');
       }
       return getUserProfile(demo && !userId ? user?.id : userId, demo, signal);
@@ -44,6 +46,13 @@ export function ProfilePage() {
           <div className="profile-actions">
             <Link className="button primary" to={`/programlar/${userId}`}>
               Antrenman programları
+            </Link>
+          </div>
+        )}
+        {userId && role === 'Dietitian' && data && !loading && !error && (
+          <div className="profile-actions">
+            <Link className="button primary" to={`/beslenme-hedefleri/${userId}`}>
+              Beslenme hedefleri
             </Link>
           </div>
         )}

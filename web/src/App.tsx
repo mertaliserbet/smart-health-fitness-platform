@@ -12,6 +12,8 @@ import { ExerciseCatalog } from './pages/ExerciseCatalog';
 import { WorkoutPlans } from './pages/WorkoutPlans';
 import { WorkoutPlanCreate } from './pages/WorkoutPlanCreate';
 import { WorkoutPlanDetail } from './pages/WorkoutPlanDetail';
+import { NutritionGoals } from './pages/NutritionGoals';
+import { NutritionGoalCreate } from './pages/NutritionGoalCreate';
 import type { WebRole } from './types/api';
 
 function ProtectedRoute() {
@@ -50,6 +52,11 @@ export function App() {
             <Route path="/programlar/:userId/yeni" element={<WorkoutPlanCreate />} />
             <Route path="/programlar/:userId/:workoutPlanId" element={<WorkoutPlanDetail />} />
             <Route path="/egzersizler" element={<ExerciseCatalog />} />
+          </Route>
+          <Route element={<RoleRoute allowed={['Dietitian']} />}>
+            <Route path="/beslenme-hedefleri" element={<NutritionGoals />} />
+            <Route path="/beslenme-hedefleri/:userId" element={<NutritionGoals />} />
+            <Route path="/beslenme-hedefleri/:userId/yeni" element={<NutritionGoalCreate />} />
           </Route>
           <Route
             path="*"

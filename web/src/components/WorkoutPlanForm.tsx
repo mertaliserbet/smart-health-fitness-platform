@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router';
 import type { ClientSummary } from '../types/api';
 import type { ExerciseResponse } from '../types/workout';
 import { ApiError } from '../services/apiClient';
-import { requireTrainerClient } from '../services/clientService';
+import { requireClient } from '../services/clientService';
 import { createWorkoutPlan } from '../services/workoutService';
 import {
   localDate,
@@ -199,7 +199,7 @@ export function WorkoutPlanForm({
     pending.current = controller;
     setSubmitting(true);
     try {
-      await requireTrainerClient(client.id, demo, controller.signal);
+      await requireClient(client.id, 'Trainer', demo, controller.signal);
       await createWorkoutPlan(client.id, prepared.request, demo, controller.signal);
       if (!controller.signal.aborted)
         await navigate(`/programlar/${client.id}`, {

@@ -1,3 +1,224 @@
+/* Nutrition screens */
+.nutrition-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 24px;
+  align-items: start;
+}
+.nutrition-editor {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  margin: 0;
+}
+.nutrition-form-section {
+  padding: 26px;
+  margin-bottom: 24px;
+}
+.nutrition-form-section .section-intro {
+  margin-bottom: 26px;
+}
+.nutrition-form .form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px 16px;
+}
+.nutrition-field {
+  min-width: 0;
+}
+.nutrition-field label {
+  display: block;
+  font-size: 12px;
+  color: #c3cee0;
+  margin-bottom: 9px;
+  margin-top: 0;
+  line-height: 1.6;
+}
+.nutrition-field input {
+  min-height: 46px;
+  font-size: 14px;
+  padding: 12px;
+}
+.calorie-field {
+  grid-column: 1 / -1;
+}
+.nutrition-client-summary {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin: 22px 0;
+}
+.nutrition-client-summary > div {
+  min-width: 0;
+}
+.nutrition-client-summary h2 {
+  font-size: 17px;
+  overflow-wrap: anywhere;
+}
+.nutrition-client-summary p {
+  font-size: 12px;
+  margin-top: 7px;
+}
+.nutrition-summary-values {
+  margin: 0;
+}
+.nutrition-summary-values > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 0;
+  border-top: 1px solid var(--border);
+}
+.nutrition-summary-values dt {
+  color: #a7b3c9;
+  font-size: 12px;
+}
+.nutrition-summary-values dd {
+  font-size: 17px;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.nutrition-summary-values dd span {
+  font-size: 11px;
+  color: #a7b3c9;
+}
+.nutrition-summary-dates {
+  margin: 18px 0;
+  font-size: 12px;
+  line-height: 1.8;
+}
+.nutrition-goal-list {
+  display: grid;
+  gap: 16px;
+  padding: 0 24px 20px;
+}
+.nutrition-goal-card {
+  padding: 24px;
+  background: #141e31;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.nutrition-goal-card.is-active {
+  background: #162438;
+  border-color: #406999;
+}
+.nutrition-goal-heading {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+}
+.nutrition-goal-heading h3 {
+  font-size: 27px;
+  margin-top: 12px;
+}
+.nutrition-goal-heading h3 span {
+  font-size: 12px;
+  font-weight: 400;
+  color: #a7b3c9;
+}
+.nutrition-status.current {
+  background: #15352f;
+  color: #8cdeba;
+  border-color: #2f6853;
+}
+.nutrition-status.scheduled,
+.nutrition-status.expired {
+  background: #30281e;
+  color: #e4c18a;
+  border-color: #685237;
+}
+.nutrition-date {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  margin-left: auto;
+  line-height: 1.8;
+}
+.nutrition-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+  margin: 24px 0 0;
+  border-top: 1px solid var(--border);
+  padding-top: 22px;
+}
+.nutrition-metrics dt {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #a7b3c9;
+}
+.nutrition-metrics dd {
+  margin: 9px 0 0;
+  font-size: 21px;
+  overflow-wrap: anywhere;
+}
+.nutrition-metrics dd span {
+  font-size: 12px;
+  color: #a7b3c9;
+}
+.nutrition-water-note,
+.nutrition-validity {
+  font-size: 12px;
+  line-height: 1.8;
+  margin-top: 18px;
+}
+.nutrition-validity {
+  color: #e4c18a;
+}
+.nutrition-profile-link {
+  padding: 0 24px 24px;
+  font-size: 13px;
+}
+.nutrition-profile-link a {
+  color: #9dc1ff;
+}
+.nutrition-intro {
+  padding: 56px 30px;
+  text-align: center;
+  max-width: 650px;
+  margin: 0 auto;
+}
+.nutrition-intro > svg {
+  color: #8bb5ff;
+  margin-bottom: 20px;
+}
+.nutrition-intro > p {
+  margin-top: 12px;
+  font-size: 14px;
+  line-height: 1.9;
+}
+@media (max-width: 1250px) {
+  .nutrition-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 600px) {
+  .nutrition-form .form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .nutrition-form-section,
+  .nutrition-goal-card {
+    padding: 18px;
+  }
+  .nutrition-goal-list {
+    padding: 0 18px 18px;
+  }
+  .nutrition-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .nutrition-date {
+    width: 100%;
+    margin-left: 0;
+  }
+}
+
 /* Workout screens */
 .client-picker-panel {
   padding: 26px;

@@ -4,6 +4,7 @@ import {
   ClipboardList,
   Dumbbell,
   LayoutDashboard,
+  Leaf,
   LogOut,
   Menu,
   UserRound,
@@ -31,9 +32,11 @@ export function AppLayout() {
         ? 'Antrenman Programları'
         : pathname.startsWith('/egzersizler')
           ? 'Egzersizler'
-          : pathname === '/profil'
-            ? 'Profil'
-            : 'Dashboard';
+          : pathname.startsWith('/beslenme-hedefleri')
+            ? 'Beslenme Hedefleri'
+            : pathname === '/profil'
+              ? 'Profil'
+              : 'Dashboard';
   async function leave() {
     setLeaving(true);
     await signOut();
@@ -89,6 +92,12 @@ export function AppLayout() {
                 Egzersizler
               </NavLink>
             </>
+          )}
+          {role === 'Dietitian' && (
+            <NavLink to="/beslenme-hedefleri">
+              <Leaf size={19} aria-hidden="true" />
+              Beslenme Hedefleri
+            </NavLink>
           )}
         </nav>
         <div className="sidebar-note">
