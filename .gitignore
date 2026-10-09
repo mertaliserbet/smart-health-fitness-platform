@@ -11,3 +11,9 @@
 !.env.example
 **/appsettings.Local.json
 
+# Web dependencies and build output
+**/node_modules/
+web/dist/
+web/coverage/
+web/*.tsbuildinfo
+

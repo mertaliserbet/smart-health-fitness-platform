@@ -32,7 +32,7 @@ Bu belge React web panelinin V1 ekran düzenini tarif eder. Ekranlar ve rol eri�
 
 **Raporlar:** İstekteki Dietitian “Raporlar” ihtiyacı V1'de **Danışan Detayı > İlerleme** alanında beslenme, kilo ve ölçüm grafikleriyle karşılanır. `UI_FLOW.md` ile uyum için ayrı sidebar öğesi veya yeni rapor endpointi açılmaz.
 
-Bir hesabın birden fazla role sahip olması halinde panel seçme davranışı henüz proje belgelerinde kararlaştırılmamıştır. Rolü belirsiz durumda yanlış role ait ekran gösterilmez. Sidebar gizlemesi güvenlik yerine geçmez; backend yetki ve aktif ilişkiyi denetler.
+Bir hesabın birden fazla web rolüne sahip olması halinde girişten sonra panel seçimi gösterilir. Yalnızca API'nin döndürdüğü `Trainer`, `Dietitian` ve `Admin` rolleri seçilebilir; tek web rolünde ilgili panel doğrudan açılır. Yalnız `User` rolüne sahip hesap web paneline alınmaz. Panel değiştirme yeni bir yetki vermez. Sidebar gizlemesi güvenlik yerine geçmez; backend yetki ve aktif ilişkiyi denetler.
 
 ## 3. Ekran grupları
 
@@ -83,4 +83,4 @@ Bir hesabın birden fazla role sahip olması halinde panel seçme davranışı h
 - Web için ayrı toplu dashboard yanıtı yok. Özetler mevcut liste/veriden üretilebilir; tüm danışanlar için ağır rapor varsayılmaz.
 - `Exercise` oluşturma/güncelleme isteklerinin ayrıntılı request/response örneği API sözleşmesinde eksik; form alanları kodlama öncesinde netleşmeli.
 - Görev/not liste yanıtlarında yazar kimliği ve danışman uzun profili net değil; kesin ilişkilendirme olmadan danışman adı uydurulmaz.
-- Çoklu role sahip hesapta panel seçimi henüz kesin değil. Sidebar buna göre tasarlanabilir, fakat V1 davranışı uygulama öncesinde kararlaştırılmalı.
+- Çoklu web rolüne sahip hesap panelini Bölüm 2'deki kurala göre seçer; yeni yetki veya API alanı oluşturulmaz.
