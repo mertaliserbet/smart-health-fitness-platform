@@ -1,0 +1,13 @@
+# .NET build output and local tooling
+**/bin/
+**/obj/
+.vs/
+*.user
+*.suo
+
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+**/appsettings.Local.json
+

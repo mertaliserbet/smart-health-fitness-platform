@@ -160,6 +160,7 @@ Sayısal enum değerleri client'a açılmamalıdır.
 409 Conflict
 422 Unprocessable Entity
 500 Internal Server Error
+503 Service Unavailable
 ```
 
 ---
@@ -2113,6 +2114,12 @@ Codex yeni endpoint oluşturmadan önce:
 
 # 38. V1 ENDPOINT ÖZETİ
 
+## Backend Sağlık Kontrolü
+
+```text
+GET    /api/health
+```
+
 ## Auth
 
 ```text
@@ -2250,7 +2257,41 @@ POST   /api/ai/food/recognize
 
 ---
 
-# 39. Son Not
+# 39. BACKEND SAĞLIK KONTROLÜ
+
+```http
+GET /api/health
+```
+
+Yetki: `Public`. Request body veya query parametresi yoktur. Controller üzerinden merkezi `AppDbContext` kullanılarak PostgreSQL bağlantısı kontrol edilir; tablo veya migration oluşturulmaz.
+
+Response DTO: `HealthResponse`. Başarı: `200 OK`, `application/json`.
+
+```json
+{
+  "status": "Healthy",
+  "database": "Connected",
+  "checkedAt": "2026-10-07T12:00:00Z"
+}
+```
+
+`checkedAt`, kontrolün UTC tarih/saatidir. PostgreSQL bağlantısı kurulamazsa `503 Service Unavailable`, `application/problem+json` ve standart `ProblemDetails` formatı döner:
+
+```json
+{
+  "type": "https://tools.ietf.org/html/rfc9110#section-15.6.4",
+  "title": "Database unavailable",
+  "status": 503,
+  "detail": "The API could not connect to PostgreSQL.",
+  "instance": "/api/health"
+}
+```
+
+Yanıt ek olarak `traceId` içerebilir. Bağlantı bilgisi ve credential yanıt içinde paylaşılmaz. Bu endpoint yalnızca backend altyapısını kontrol eder; mobil Health Connect / HealthKit verileriyle ilgili değildir. Mevcut domain endpointlerinin sözleşmesini veya veritabanı modelini değiştirmez.
+
+---
+
+# 40. Son Not
 
 Bu doküman projenin **V1 API sözleşmesidir**.
 
