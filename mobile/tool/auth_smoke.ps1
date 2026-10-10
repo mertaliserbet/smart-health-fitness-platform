@@ -65,7 +65,7 @@ try {
     flutter test integration_test/auth_flow_test.dart -d $Device `
         "--dart-define=API_BASE_URL=http://10.0.2.2:$ApiPort" --dart-define=AUTH_TEST_FIXTURE=true
     if ($LASTEXITCODE -ne 0) { throw 'Android auth integration test failed.' }
-    Write-Output 'PASS: mobile register, login, me, native secure storage, restore, refresh and logout.'
+    Write-Output 'PASS: mobile auth/session, weight and body measurement creation/history, and logout against PostgreSQL.'
 }
 finally {
     Set-Location $repositoryRoot

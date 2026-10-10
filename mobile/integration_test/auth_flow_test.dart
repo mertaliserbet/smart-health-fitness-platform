@@ -15,7 +15,7 @@ import 'package:smart_health_fitness_mobile/features/navigation/app_shell.dart';
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('register → login → me → secure restore → refresh → logout', (
+  testWidgets('register → login → me → refresh → weight/measurements → logout', (
     tester,
   ) async {
     // Simulate the keyboard only. HTTP and secure storage use the real device.
@@ -137,6 +137,37 @@ void main() {
     expect((await api.get('/api/users/me'))['email'], email);
     final current = (await store.read())!;
     expect(current.refreshToken == rotated.refreshToken, isFalse);
+
+    // Real Flutter forms → authenticated API → disposable PostgreSQL → history.
+    await tester.tap(find.byType(NavigationDestination).at(3));
+    await tester.pumpAndSettle();
+    expect(find.text('Henüz kilo kaydı yok'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilledButton, 'Kilo Ekle'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const ValueKey('weightKg')), '82,45');
+    await tester.ensureVisible(find.widgetWithText(FilledButton, 'Kaydet'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Kaydet'));
+    await tester.pumpAndSettle();
+    expect(find.text('82,45 kg'), findsNWidgets(2));
+    expect(
+      (await api.getList('/api/users/me/weight-records')).single['weightKg'],
+      82.45,
+    );
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Ölçüm Ekle'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const ValueKey('waistCm')), '88,25');
+    await tester.ensureVisible(find.widgetWithText(FilledButton, 'Kaydet'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Kaydet'));
+    await tester.pumpAndSettle();
+    final measurements = await api.getList('/api/users/me/body-measurements');
+    expect(measurements.single['waistCm'], 88.25);
+    expect(measurements.single['chestCm'], isNull);
+    await tester.ensureVisible(find.text('Bel: 88,25 cm'));
+    expect(find.text('Bel: 88,25 cm'), findsOneWidget);
+    await tester.tap(find.byType(NavigationDestination).first);
+    await tester.pumpAndSettle();
 
     await tester.tap(find.byTooltip('Profil ve Ayarlar'));
     await tester.pumpAndSettle();

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../auth/auth_service.dart';
 import '../home/home_screen.dart';
 import '../profile/profile_screen.dart';
+import '../tracking/tracking_screen.dart';
 import 'section_screens.dart';
 
 class AppShell extends StatefulWidget {
@@ -87,10 +88,15 @@ class _AppShellState extends State<AppShell> {
       body: IndexedStack(
         index: index,
         children: [
-          HomeScreen(user: widget.auth.user!),
+          HomeScreen(
+            user: widget.auth.user!,
+            onOpenPlan: () => _selectedIndex.value = 1,
+            onOpenTracking: () => _selectedIndex.value = 3,
+            onOpenAdvisors: () => _selectedIndex.value = 4,
+          ),
           const MyPlanScreen(),
           const AIScreen(),
-          const TrackingScreen(),
+          TrackingScreen(api: widget.auth.api, active: index == 3),
           const MyAdvisorsScreen(),
         ],
       ),

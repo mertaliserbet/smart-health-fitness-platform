@@ -1198,6 +1198,14 @@ Trainer yalnızca bağlı danışanın verisini görebilir.
 
 # 17. WEIGHT RECORD ENDPOINTLERİ
 
+17.1 ve 17.2 uygulanmıştır. Yetki: Bearer JWT + `User` rolü. Sahiplik yalnızca JWT `sub` claim'i üzerinden belirlenir; başka bir kullanıcının ID'siyle veri seçilmez. Request'teki bilinmeyen alanlar (`userId`, `id`, `createdAt` dahil) `400` ile reddedilir. Query'de `userId` göndermek sahipliği değiştirmez. Token yok/geçersiz veya hesap pasifse `401`; `User` rolü yoksa `403`; validation hataları camelCase alan adlarıyla `400 ValidationProblemDetails` döner. Cevaplar `Cache-Control: no-store` taşır.
+
+Liste: `200 OK`, JSON array; boşsa `[]`. `recordedAt`, ardından sunucudaki `createdAt` ve `id` azalan sırasıyla döner. İlk kayıt en güncel kilodur; aynı zamana birden fazla kayıt izinlidir. Bu V1 listesinde pagination/filtre yoktur. `WeightRecordResponse` alanları `id`, `weightKg`, `recordedAt` ile sınırlıdır.
+
+Ekleme: `CreateWeightRecordRequest`. `weightKg` zorunlu JSON number, 0.01–1000 kg ve en fazla iki ondalık basamak; `recordedAt` zorunlu ISO 8601 tarih/saat, gelecekte olamaz. İstemci UTC `Z` gönderir; açık offset gönderilirse UTC'ye dönüştürülür. Başarı: `201 Created`, gövde `WeightRecordResponse`, `Location: /api/users/me/weight-records` (liste adresi). Kayıt zamanı geçmişte olabilir; kayıt oluşturulma zamanı sunucuya aittir. Sınırlar teknik doğrulama içindir, sağlık önerisi değildir.
+
+17.3 danışman okuma akışı bu özelliğin kapsamı dışındadır; henüz uygulanmamıştır.
+
 ## 17.1 Kendi Kilo Kayıtlarını Getir
 
 ```http
@@ -1211,7 +1219,7 @@ Response:
   {
     "id": "0bec6163-394c-43bd-ac68-478cf84a913e",
     "weightKg": 82.4,
-    "recordedAt": "2026-11-01T08:00:00Z"
+    "recordedAt": "2026-10-01T08:00:00Z"
   }
 ]
 ```
@@ -1229,7 +1237,7 @@ Request:
 ```json
 {
   "weightKg": 82.4,
-  "recordedAt": "2026-11-01T08:00:00Z"
+  "recordedAt": "2026-10-01T08:00:00Z"
 }
 ```
 
@@ -1251,6 +1259,27 @@ Assigned Dietitian
 ---
 
 # 18. BODY MEASUREMENT ENDPOINTLERİ
+
+18.1 ve 18.2 uygulanmıştır. Yetki/sahiplik/hata/cache ve sıralama kuralları bölüm 17 ile aynıdır. 18.3 danışman okuma akışı henüz uygulanmamıştır.
+
+Liste: `200 OK`, `BodyMeasurementResponse[]`; boşsa `[]`. DTO: `id`, nullable `chestCm`, `waistCm`, `hipCm`, `armCm`, `thighCm`, `bodyFatPercentage` ve `recordedAt`. Yanıtta alanlar atlanmaz; verilmemiş ölçümler `null` döner.
+
+Ekleme: `CreateBodyMeasurementRequest`. Beş çevre ölçümü 0.01–1000 cm, `bodyFatPercentage` 0–100; en fazla iki ondalık basamak. Her ölçüm opsiyoneldir, ancak en az biri dolu olmalıdır; tümü boşsa `errors.measurements` döner. `recordedAt` zorunlu ve gelecekte olmayan ISO 8601 tarih/saat; UTC saklanır. Başarı: `201 Created`, `BodyMeasurementResponse`, `Location: /api/users/me/body-measurements` (liste adresi). Bilinmeyen alanlar reddedilir.
+
+Örnek liste/ekleme yanıtı:
+
+```json
+{
+  "id": "ff354ad1-bb35-4c8f-bf5a-fdb70d5f656c",
+  "chestCm": null,
+  "waistCm": 88,
+  "hipCm": null,
+  "armCm": null,
+  "thighCm": null,
+  "bodyFatPercentage": null,
+  "recordedAt": "2026-10-01T08:00:00Z"
+}
+```
 
 ## 18.1 Kendi Ölçümlerini Getir
 
@@ -1276,7 +1305,7 @@ Request:
   "armCm": 36,
   "thighCm": 58,
   "bodyFatPercentage": null,
-  "recordedAt": "2026-11-01T08:00:00Z"
+  "recordedAt": "2026-10-01T08:00:00Z"
 }
 ```
 

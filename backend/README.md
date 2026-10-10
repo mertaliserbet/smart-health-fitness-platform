@@ -129,6 +129,8 @@ Parolalar ASP.NET Core `PasswordHasher<User>` ile salt içeren PBKDF2 hash'i ola
 | Me | `GET /api/users/me` | `200` mevcut kullanıcı | Bearer JWT |
 | Logout | `POST /api/auth/logout` | `204` | Bearer JWT, kendi refresh token'ı |
 | Health | `GET /api/health` | `200` / `503` | Public |
+| Kilo geçmişi / ekleme | `GET/POST /api/users/me/weight-records` | `200` liste / `201` kayıt | Bearer JWT + `User` |
+| Ölçüm geçmişi / ekleme | `GET/POST /api/users/me/body-measurements` | `200` liste / `201` kayıt | Bearer JWT + `User` |
 
 Request/response ve hata detayları: `../docs/API_CONTRACT.md` bölüm 8, 9.1 ve 39.
 
@@ -137,6 +139,8 @@ Swagger'da register ile hesap oluşturun (`firstName`, `lastName`, `email`, `pas
 ## Migration ve otomatik kontroller
 
 `InitialUserAuthentication` yalnızca `users`, `roles`, `user_roles`, `refresh_tokens` tablolarını oluşturur. Dört rol eklenir; hiçbir admin/trainer/dietitian kullanıcı hesabı seed edilmez. User profil alanları nullable olarak hazırdır; profil düzenleme endpointi bu aşamada yoktur.
+
+`AddWeightRecordsAndBodyMeasurements` yalnızca `weight_records` ve `body_measurements` tablolarını ekler. Kayıtlar JWT'deki kullanıcıya aittir; `userId` request'ten seçilemez. Sayı aralıkları ve boş ölçüm kuralları API validation ve PostgreSQL check constraint'leriyle korunur. UTC tarihleri ve kullanıcı/tarih indeksleri kullanılır. İki endpoint grubunun sözleşmesi `API_CONTRACT.md` bölüm 17–18'de bulunur. Danışman okuma endpointleri bu aşamada uygulanmamıştır.
 
 Migration uygulama başlangıcında otomatik çalışmaz; yukarıdaki `database update` komutuyla uygulanır. EF migration oluşturmak için JWT secret gerekmez, ancak veritabanı connection string configuration'ı gerekir. Model ile migration uyumunu kontrol etmek için:
 
@@ -150,8 +154,8 @@ Repository kökünde (Windows PowerShell veya PowerShell 7, çalışan Docker De
 & ./backend/tests/AuthSmoke.ps1
 ```
 
-Script restore/build yapar, rastgele geçici credential kullanır, ayrı bir PostgreSQL Compose projesine migration uygular ve API'yi gizli bir işlem olarak başlatır. Register → login → me → refresh, role seçimi reddi, aynı email/eşzamanlı kayıt, JWT imza/süre/issuer/audience, refresh süre/tek kullanım/eşzamanlılık, hash saklama, logout sahipliği, pasif kullanıcı ve health kontrollerini yapar. Kendi geçici container/volume/process'ini sonunda temizler; geliştirme veritabanına bağlanmaz. Test portları `5059` ve `55432`; doluysa `-ApiPort` ve `-DatabasePort` parametrelerini kullanın. Güncel build zaten varsa `-NoBuild` verilebilir.
+Script restore/build yapar, rastgele geçici credential kullanır, ayrı bir PostgreSQL Compose projesine migration uygular ve API'yi gizli bir işlem olarak başlatır. Register → login → me → refresh, role seçimi reddi, aynı email/eşzamanlı kayıt, JWT imza/süre/issuer/audience, refresh süre/tek kullanım/eşzamanlılık, hash saklama, logout sahipliği, pasif kullanıcı ve health kontrollerini yapar. Aynı fixture içindeki `TrackingChecks.ps1`, kilo/ölçüm ekleme ve sıralı geçmişi, sayı/tarih validation'ını, kısmi ölçümleri, rol kontrolünü ve iki kullanıcı arasında veri izolasyonunu test eder. Kendi geçici container/volume/process'ini sonunda temizler; geliştirme veritabanına bağlanmaz. Test portları `5059` ve `55432`; doluysa `-ApiPort` ve `-DatabasePort` parametrelerini kullanın. Güncel build zaten varsa `-NoBuild` verilebilir.
 
-Bu aşamada Advisor, Workout, Nutrition, Running, AI veya Health tabloları ve istemci uygulamaları yoktur. Ek mimari katman veya repository abstraction eklenmemiştir.
+Bu aşamada Advisor, Workout, Nutrition, Running, AI veya Health tabloları yoktur. Ek mimari katman veya repository abstraction eklenmemiştir. Mevcut `baslat.cmd` başlatıcısı backend'i açarken migration'ları uygular; ayrı çalıştırırken yukarıdaki `database update` adımı gereklidir.
 
 Kullanılan framework bileşenleri: [JWT bearer authentication](https://learn.microsoft.com/en-us/aspnet/core/security/authentication/configure-jwt-bearer-authentication?view=aspnetcore-10.0), [ASP.NET Core password hashing](https://learn.microsoft.com/en-us/aspnet/core/security/data-protection/consumer-apis/password-hashing?view=aspnetcore-10.0).

@@ -21,16 +21,6 @@ class AIScreen extends StatelessWidget {
   );
 }
 
-class TrackingScreen extends StatelessWidget {
-  const TrackingScreen({super.key});
-  @override
-  Widget build(BuildContext context) => const SectionPlaceholder(
-    title: 'Takip',
-    icon: Icons.insights_outlined,
-    description: 'Kilo, ölçüm ve aktivite geçmişin burada yer alacak.',
-  );
-}
-
 class MyAdvisorsScreen extends StatelessWidget {
   const MyAdvisorsScreen({super.key});
   @override

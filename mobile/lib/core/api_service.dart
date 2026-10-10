@@ -47,21 +47,29 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> get(String path, {bool authenticated = true}) =>
-      _request('GET', path, authenticated: authenticated);
+      _request<Map<String, dynamic>>('GET', path, authenticated: authenticated);
+
+  Future<List<dynamic>> getList(String path) =>
+      _request<List<dynamic>>('GET', path, authenticated: true);
 
   Future<Map<String, dynamic>> post(
     String path,
     Map<String, dynamic> body, {
     bool authenticated = false,
-  }) => _request('POST', path, body: body, authenticated: authenticated);
+  }) => _request<Map<String, dynamic>>(
+    'POST',
+    path,
+    body: body,
+    authenticated: authenticated,
+  );
 
-  Future<Map<String, dynamic>> _request(
+  Future<T> _request<T>(
     String method,
     String path, {
     Map<String, dynamic>? body,
     required bool authenticated,
   }) async {
-    if (!authenticated) return _send(method, path, body: body);
+    if (!authenticated) return _send<T>(method, path, body: body);
     final version = _sessionVersion;
     if (_tokens == null) {
       throw const ApiException('Lütfen giriş yapın.', statusCode: 401);
@@ -70,14 +78,14 @@ class ApiService {
     _requireVersion(version);
     final accessToken = _tokens!.accessToken;
     try {
-      return await _send(method, path, body: body, accessToken: accessToken);
+      return await _send<T>(method, path, body: body, accessToken: accessToken);
     } on ApiException catch (error) {
       if (error.statusCode != 401) rethrow;
       _requireVersion(version);
       if (_tokens!.accessToken == accessToken) await refreshSession();
       _requireVersion(version);
       try {
-        return await _send(
+        return await _send<T>(
           method,
           path,
           body: body,
@@ -107,7 +115,7 @@ class ApiService {
       throw const ApiException('Oturum sona erdi.', statusCode: 401);
     }
     try {
-      final response = await _send(
+      final response = await _send<Map<String, dynamic>>(
         'POST',
         '/api/auth/refresh',
         body: {'refreshToken': current.refreshToken},
@@ -183,7 +191,7 @@ class ApiService {
     }
   }
 
-  Future<Map<String, dynamic>> _send(
+  Future<T> _send<T>(
     String method,
     String path, {
     Map<String, dynamic>? body,
@@ -208,15 +216,10 @@ class ApiService {
       final response = await (() async {
         return http.Response.fromStream(await _client.send(request));
       })().timeout(AppConfig.requestTimeout);
-      Map<String, dynamic> json = {};
+      Object? json = <String, dynamic>{};
       if (response.bodyBytes.isNotEmpty) {
         try {
-          final decoded = jsonDecode(utf8.decode(response.bodyBytes));
-          if (decoded is Map<String, dynamic>) {
-            json = decoded;
-          } else if (response.statusCode < 400) {
-            throw const FormatException();
-          }
+          json = jsonDecode(utf8.decode(response.bodyBytes));
         } on FormatException {
           if (response.statusCode < 400) {
             throw const ApiException(
@@ -226,9 +229,13 @@ class ApiService {
         }
       }
       if (response.statusCode < 200 || response.statusCode >= 300) {
-        throw _problem(response.statusCode, json);
+        throw _problem(
+          response.statusCode,
+          json is Map<String, dynamic> ? json : {},
+        );
       }
-      return json;
+      if (json is T) return json;
+      throw const ApiException('Sunucu yanıtı okunamadı. Tekrar deneyin.');
     } on http.RequestAbortedException {
       throw const ApiException('İstek zaman aşımına uğradı. Tekrar deneyin.');
     } on TimeoutException {

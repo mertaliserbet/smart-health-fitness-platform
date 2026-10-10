@@ -10,6 +10,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<Role> Roles => Set<Role>();
     public DbSet<UserRole> UserRoles => Set<UserRole>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    public DbSet<WeightRecord> WeightRecords => Set<WeightRecord>();
+    public DbSet<BodyMeasurement> BodyMeasurements => Set<BodyMeasurement>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

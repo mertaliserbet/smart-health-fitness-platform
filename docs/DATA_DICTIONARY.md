@@ -540,6 +540,8 @@ RecordedAt
 CreatedAt
 ```
 
+Uygulama kuralları: `Id`/`UserId` UUID, `WeightKg` PostgreSQL `numeric(6,2)`, `RecordedAt`/`CreatedAt` UTC `timestamp with time zone` olarak saklanır. Kilo 0,01–1000 kg aralığında ve en fazla iki ondalık basamaklıdır; bu teknik giriş sınırıdır, sağlık hedefi değildir. Kayıt zamanı zorunludur ve gelecekte olamaz. `CreatedAt` sunucu tarafından üretilir. Kullanıcı kimliği JWT `sub` alanından alınır; request'ten seçilemez. `(UserId, RecordedAt)` indeksi ve `users` foreign key'i vardır; kullanıcı silinirse kayıtları da silinir. Aynı zamana birden fazla kayıt izinlidir. Liste `RecordedAt`, ardından `CreatedAt` ve `Id` azalan sırasındadır; ilk kayıt güncel kilodur.
+
 Örnek:
 
 ```text
@@ -572,6 +574,8 @@ CreatedAt
 ```
 
 Tüm ölçümlerin zorunlu olması gerekmez.
+
+En az bir ölçüm zorunludur; boş alanlar `null` saklanır. Göğüs, bel, kalça, kol ve uyluk 0,01–1000 cm; `BodyFatPercentage` 0–100 aralığındadır. Tüm sayılar en fazla iki ondalık basamaklı ve `numeric(6,2)` olarak saklanır. Bunlar teknik giriş sınırlarıdır. Kimlik, tarih, sahiplik, sıralama, indeks ve foreign key davranışı `WeightRecord` ile aynıdır. Veritabanı check constraint'leri sayı aralıklarını ve en az bir ölçüm koşulunu da korur.
 
 ---
 

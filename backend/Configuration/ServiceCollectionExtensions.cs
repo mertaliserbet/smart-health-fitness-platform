@@ -27,6 +27,7 @@ public static class ServiceCollectionExtensions
 
         services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
         services.AddBackendAuthentication(configuration);
+        services.AddScoped<SmartHealthFitness.Api.Services.TrackingService>();
 
         services.AddControllers(options =>
             options.ModelMetadataDetailsProviders.Add(new SystemTextJsonValidationMetadataProvider()))

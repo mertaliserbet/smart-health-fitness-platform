@@ -24,6 +24,8 @@ Future<AuthService> openApp(
         (request) async {
           return switch (request.url.path) {
             '/api/users/me' => jsonResponse(userJson),
+            '/api/users/me/weight-records' ||
+            '/api/users/me/body-measurements' => jsonResponse([]),
             '/api/auth/login' => jsonResponse({
               ...tokens('login'),
               'user': userJson,
@@ -71,13 +73,14 @@ void main() {
   });
 
   testWidgets(
-    'all tabs work without module API calls; profile is outside the menu',
+    'tabs work; tracking loads on first visit and profile stays outside the menu',
     (tester) async {
       final requests = <String>[];
       await openApp(
         tester,
         handler: (request) async {
           requests.add(request.url.path);
+          if (request.url.path != '/api/users/me') return jsonResponse([]);
           return jsonResponse(userJson);
         },
       );
@@ -110,7 +113,11 @@ void main() {
         tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex,
         0,
       );
-      expect(requests, ['/api/users/me']);
+      expect(requests, [
+        '/api/users/me',
+        '/api/users/me/weight-records',
+        '/api/users/me/body-measurements',
+      ]);
     },
   );
 
