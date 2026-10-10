@@ -282,7 +282,9 @@ Normal kayıt olan kullanıcıya varsayılan olarak `User` rolü verilir.
 
 Response DTO: `RegisterResponse`. Register token üretmez; kullanıcı sonrasında login yapar. Yalnızca `firstName`, `lastName`, `email`, `password` kabul edilir. `roles`, `role` veya başka tanımsız alan göndermek `400 Bad Request` üretir; public istekle Trainer/Dietitian/Admin verilemez.
 
-Validation: ad/soyad boş olamaz ve en fazla 100 karakterdir; e-posta geçerli ve en fazla 254 karakterdir; parola 12–128 karakterdir ve kırpılmaz. Ad/soyad kırpılır, e-posta kırpılıp invariant küçük harfe dönüştürülür. Aynı normalize e-postayla kayıt `409 Conflict`; validation `400 Bad Request` ve `ValidationProblemDetails` döner.
+Validation: ad/soyad boş olamaz ve en fazla 100 karakterdir. Türkçe dahil Unicode harfler ve harflere bağlı birleşen işaretler kabul edilir. İsim parçaları arasında normal boşluk, tire (`-`), düz (`'`) veya tipografik (`’`) apostrof kullanılabilir; birden fazla normal boşluk da kabul edilir. Tire/apostrof başta, sonda veya art arda olamaz. Sayı, emoji, diğer özel karakterler, tab ve satır sonu kabul edilmez. Örnekler: `Mert Ali`, `Şerbet`, `Çağrı`, `Özgür`, `İrem`, `Gökçe`, `Jean-Luc`, `O'Connor`. Mobil ve backend aynı isim kuralını uygular.
+
+E-posta geçerli ve en fazla 254 karakterdir; parola 12–128 karakterdir ve kırpılmaz. Ad/soyad kırpılır, e-posta kırpılıp invariant küçük harfe dönüştürülür. Aynı normalize e-postayla kayıt `409 Conflict`; validation `400 Bad Request` ve `ValidationProblemDetails` döner.
 
 ---
 

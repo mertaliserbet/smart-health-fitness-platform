@@ -1,14 +1,15 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 using SmartHealthFitness.Api.Entities;
+using SmartHealthFitness.Api.Validation;
 
 namespace SmartHealthFitness.Api.Contracts;
 
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 public sealed class RegisterRequest
 {
-    [Required, StringLength(100)] public string FirstName { get; init; } = string.Empty;
-    [Required, StringLength(100)] public string LastName { get; init; } = string.Empty;
+    [Required, StringLength(100), PersonName] public string FirstName { get; init; } = string.Empty;
+    [Required, StringLength(100), PersonName] public string LastName { get; init; } = string.Empty;
     [Required, EmailAddress, StringLength(254)] public string Email { get; init; } = string.Empty;
     [Required, StringLength(128, MinimumLength = 12)] public string Password { get; init; } = string.Empty;
 }

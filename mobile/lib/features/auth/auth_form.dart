@@ -3,9 +3,19 @@ import 'package:flutter/material.dart';
 import '../../core/app_config.dart';
 
 class AuthValidation {
+  // Unicode letters and combining marks; separators must be between name parts.
+  static final _namePattern = RegExp(
+    r"^ *\p{L}[\p{L}\p{M}]*(?:(?: +|[-'’])\p{L}[\p{L}\p{M}]*)* *$",
+    unicode: true,
+  );
+
   static String? name(String? value) {
     if (value == null || value.trim().isEmpty) return 'Bu alanı doldurun.';
     if (value.length > 100) return 'En fazla 100 karakter girin.';
+    final match = _namePattern.firstMatch(value);
+    if (match == null || match.end != value.length) {
+      return 'Yalnızca harf, boşluk, tire ve apostrof kullanın.';
+    }
     return null;
   }
 

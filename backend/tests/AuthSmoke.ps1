@@ -1,4 +1,4 @@
-param(
+﻿param(
     [ValidateRange(1024, 65535)] [int] $ApiPort = 5059,
     [ValidateRange(1024, 65535)] [int] $DatabasePort = 55432,
     [switch] $NoBuild
@@ -135,6 +135,31 @@ try {
     $email = [Guid]::NewGuid().ToString('N') + '@example.test'
     $password = 'Aa1!' + [Guid]::NewGuid().ToString('N')
     $registerBody = @{ firstName = 'Auth'; lastName = 'Check'; email = $email; password = $password }
+    $validNames = @('Mert Ali', 'Şerbet', 'Çağrı', 'Özgür', 'İrem', 'Gökçe',
+        'Jean-Luc', "O'Connor", "O’Connor", ' Mert  Ali ', "Jose$([char]0x0301)",
+        "I$([char]0x0307)rem", 'Αλέξανδρος', '李明', 'محمد', 'अनन्या', '𐐀𐐨', 'A', ('A' * 100))
+    foreach ($name in $validNames) {
+        $body = $registerBody.Clone()
+        $body.firstName = $name; $body.lastName = $name
+        $body.email = [Guid]::NewGuid().ToString('N') + '@example.test'
+        $result = Invoke-Api 'POST' '/api/auth/register' $body
+        Assert-Check ($result.Status -eq 201) "Unicode name registration failed: $name"
+        Assert-Check ($result.Body.firstName -ceq $name.Trim() -and $result.Body.lastName -ceq $name.Trim()) 'Name response did not preserve Unicode.'
+        $nameUserId = ([Guid]::Parse($result.Body.id)).ToString()
+        $storedNames = Invoke-CheckSql "SELECT first_name || '|' || last_name FROM users WHERE id = '$nameUserId';"
+        Assert-Check ($storedNames -ceq ($name.Trim() + '|' + $name.Trim())) 'Stored name did not preserve Unicode.'
+    }
+    $invalidNames = @('', '   ', '123', 'Mert1', 'Mert١', 'Mert_Ali', 'Mert@Ali',
+        'Mert🙂', '-', "''", '-Mert', 'Mert-', "'Mert", "Mert'", 'Jean--Luc',
+        "O''Connor", 'Mert - Ali', "$([char]0x0301)Mert", "Mert`tAli", "Mert`n", "`nMert", ('A' * 101), $null)
+    foreach ($field in @('firstName', 'lastName')) {
+        foreach ($name in $invalidNames) {
+            $body = $registerBody.Clone(); $body[$field] = $name
+            $result = Invoke-Api 'POST' '/api/auth/register' $body
+            Assert-Check ($result.Status -eq 400 -and $null -ne $result.Body.errors.$field) "Invalid $field did not return field validation error."
+        }
+    }
+    Write-Output 'PASS: Unicode first/last names accepted and stored; digits, symbols, malformed separators and length rejected.'
     $invalid = Invoke-Api 'POST' '/api/auth/register' @{ firstName = ''; lastName = ''; email = 'invalid'; password = 'short' }
     Assert-Check ($invalid.Status -eq 400 -and $null -ne $invalid.Body.errors) 'Validation must return 400 + errors.'
     $errorFieldNames = @($invalid.Body.errors.PSObject.Properties.Name)

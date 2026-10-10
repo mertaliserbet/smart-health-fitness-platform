@@ -61,8 +61,8 @@ UpdatedAt
 Açıklamalar:
 
 - `Id`: Kullanıcının benzersiz kimliği.
-- `FirstName`: Ad.
-- `LastName`: Soyad.
+- `FirstName`: Ad; Türkçe dahil Unicode harfler ve harfe bağlı birleşen işaretler kabul edilir.
+- `LastName`: Soyad; `FirstName` ile aynı validation kuralını kullanır. İsim parçaları arasında normal boşluk, tire (`-`) ve apostrof (`'`, `’`) kullanılabilir; sayı, diğer özel karakterler ve kontrol karakterleri kabul edilmez. Ayrıntılı kayıt kuralı `API_CONTRACT.md` §8.1'de tanımlıdır.
 - `Email`: Sisteme giriş için kullanılan e-posta.
 - `PasswordHash`: Şifrenin hashlenmiş hali.
 - `PhoneNumber`: Opsiyonel telefon numarası.
