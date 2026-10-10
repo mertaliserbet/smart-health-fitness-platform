@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'app.dart';
 import 'core/app_config.dart';
+import 'core/app_theme.dart';
 import 'core/api_service.dart';
 import 'features/auth/auth_service.dart';
 import 'features/auth/token_store.dart';
@@ -18,6 +19,7 @@ void main() {
   } on Object catch (error) {
     runApp(
       MaterialApp(
+        theme: AppTheme.dark,
         home: Scaffold(
           body: SafeArea(
             child: Center(

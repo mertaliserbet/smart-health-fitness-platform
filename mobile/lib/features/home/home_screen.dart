@@ -1,37 +1,16 @@
 import 'package:flutter/material.dart';
 
-import '../auth/auth_service.dart';
+import '../auth/user.dart';
+import '../navigation/section_placeholder.dart';
 
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key, required this.auth});
-  final AuthService auth;
+  const HomeScreen({super.key, required this.user});
+  final User user;
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Ana Sayfa')),
-    body: SafeArea(
-      child: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Hoş geldin, ${auth.user!.fullName}',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-              const SizedBox(height: 12),
-              Text(auth.user!.email, textAlign: TextAlign.center),
-              const SizedBox(height: 24),
-              FilledButton(
-                onPressed: auth.isBusy ? null : auth.logout,
-                child: Text(auth.isBusy ? 'Çıkış yapılıyor…' : 'Çıkış Yap'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    ),
+  Widget build(BuildContext context) => SectionPlaceholder(
+    title: 'Merhaba, ${user.firstName}',
+    icon: Icons.home_outlined,
+    description: 'Günlük sağlık ve fitness özetin burada yer alacak.',
   );
 }

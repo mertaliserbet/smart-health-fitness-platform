@@ -10,6 +10,7 @@ import 'package:smart_health_fitness_mobile/core/app_config.dart';
 import 'package:smart_health_fitness_mobile/features/auth/auth_service.dart';
 import 'package:smart_health_fitness_mobile/features/auth/auth_form.dart';
 import 'package:smart_health_fitness_mobile/features/auth/token_store.dart';
+import 'package:smart_health_fitness_mobile/features/navigation/app_shell.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -99,7 +100,7 @@ void main() {
       const Duration(seconds: 45),
     );
     expect(
-      find.text('Ana Sayfa'),
+      find.byType(AppShell),
       findsOneWidget,
       reason:
           'Auth status: ${auth.status}; login matches: ${client.loginMatches}; email matches: ${client.emailMatches}; password matches: ${client.passwordMatches}; messages: ${tester.widgetList<AuthMessage>(find.byType(AuthMessage)).map((message) => message.message).join("; ")}',
@@ -137,6 +138,9 @@ void main() {
     final current = (await store.read())!;
     expect(current.refreshToken == rotated.refreshToken, isFalse);
 
+    await tester.tap(find.byTooltip('Profil ve Ayarlar'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.widgetWithText(FilledButton, 'Çıkış Yap'));
     await tester.tap(find.widgetWithText(FilledButton, 'Çıkış Yap'));
     await tester.pumpAndSettle();
     expect(find.widgetWithText(FilledButton, 'Giriş Yap'), findsOneWidget);

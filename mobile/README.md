@@ -1,7 +1,7 @@
 # Yapay Zekâ Destekli Sağlık ve Fitness Platformu — Mobil
 
 Flutter Android/iOS temeli; kayıt, giriş, oturum kontrolü/yenileme ve çıkış.
-Ana Sayfa bu aşamada yalnızca giriş yapan kullanıcının adı, e-postası ve çıkış butonudur.
+Giriş sonrası ana uygulama beş alt menüden oluşur: **Ana Sayfa, Planım, AI, Takip, Rehberim**. Her bölüm şimdilik sade placeholder içerik gösterir; modül API'leri çağrılmaz ve gerçek fitness/AI özellikleri henüz geliştirilmemiştir. Profil/Ayarlar Ana Sayfa'nın sağ üst profil düğmesinden açılır; mevcut hesap adı/e-postası ve çıkış işlemi burada bulunur.
 
 ## Gereksinimler ve çalıştırma
 
@@ -29,9 +29,10 @@ flutter run --dart-define=API_BASE_URL=http://10.0.2.2:5000
 ```text
 lib/
   main.dart                     Configuration ve servisleri bağlar
-  app.dart                      Tema ve oturuma göre ekran seçimi
+  app.dart                      Oturuma göre ekran seçimi
   core/
     app_config.dart             Merkezi URL/timeout/uygulama adı
+    app_theme.dart              Ortak koyu tema ve mavi vurgu
     api_service.dart            JSON, Bearer, hata ve refresh işlemleri
   features/
     auth/
@@ -41,13 +42,20 @@ lib/
       auth_form.dart            Ortak form bileşenleri ve doğrulama
       login_screen.dart
       register_screen.dart
-    home/home_screen.dart       Geçici Ana Sayfa
+    home/home_screen.dart       Ana Sayfa placeholder içeriği
+    navigation/
+      app_shell.dart            Beş alt menü ve korunan profil navigasyonu
+      section_screens.dart      Planım, AI, Takip, Rehberim placeholder'ları
+      section_placeholder.dart  Kaydırılabilir, genişliği sınırlı ortak içerik
+    profile/profile_screen.dart Profil/Ayarlar girişi ve mevcut çıkış işlemi
 test/                           Birim ve widget testleri
 integration_test/               Android üzerinde gerçek backend auth testi
 tool/auth_smoke.ps1              Geçici PostgreSQL/API test ortamı
 ```
 
 Ek state yönetimi veya routing paketi kullanılmaz; Flutter `ChangeNotifier`, `ListenableBuilder` ve `Navigator` yeterlidir.
+
+Shell içindeki `IndexedStack` sekme içeriklerini ve kaydırma konumlarını korur. Profil route'u shell'in kendi `Navigator`'ında açılır; geri tuşu Ana Sayfa'ya döner. Logout veya oturumun sona ermesi shell ile tüm korunan alt ekranları kaldırır. Yeniden giriş Ana Sayfa'dan başlar. Ortak tema giriş/kayıt ekranlarında da kullanılır. Kartlar geniş ekranlarda 680 piksel ile sınırlıdır; dar/yatay ekranlarda ve büyütülmüş metinde içerik kaydırılabilir.
 
 ## Endpointler ve oturum davranışı
 
@@ -89,6 +97,6 @@ Varsayılan cihaz `emulator-5554`, API portu `5061`, PostgreSQL portu `55433`; p
 
 Script benzersiz Compose projesi/veritabanı açar, mevcut backend migration'ını yalnızca test veritabanına uygular, rastgele geçici secret kullanır; Flutter cihaz testi bitince kendi API sürecini ve PostgreSQL container/volume/network'ünü kaldırır. Mevcut kullanıcı veritabanına bağlanmaz. Native güvenli depolama, yeni servisle oturum açılışı, tek kullanımlık refresh, `401` kurtarma ve logout iptalini doğrular. Cihaz testinde klavye girdisi Flutter test aracıyla simüle edilir; HTTP ve güvenli depolama gerçek Android ortamını kullanır. `AUTH_TEST_FIXTURE` yalnızca entegrasyon testinin çalıştırma kontrolüdür; üretim özelliği değildir.
 
-Doğrulama: `flutter analyze` temiz; 22 birim/widget testi, 1 Android açılış/çevrimdışı testi ve 1 Android + gerçek backend auth entegrasyon testi başarılı. Açılış testi için `5063` portu kapalı olmalıdır; gerçek `main.dart` ve native token okuma kullanılır. Normal uygulamanın Android debug APK'sı derlendi. Entegrasyon testi cihazda test uygulamasını bırakabilir; normal uygulamaya dönmek için `flutter run` çalıştırın. Yalnız APK çıktısı almak için yukarıdaki `flutter build apk --debug ...` komutunu kullanın.
+Shell widget testleri giriş ve kayıtlı oturumdan açılışı, beş sekme geçişini, profil/geri davranışını, logout ve oturumun sona ermesini, dar/yatay/geniş ekranlarda büyütülmüş metni kontrol eder. Auth birim testleri mevcut token/refresh davranışını da kapsar. Android açılış testi için `5063` portu kapalı olmalıdır; gerçek `main.dart` ve native token okuma kullanılır. Entegrasyon testi cihazda test uygulamasını bırakabilir; normal uygulamaya dönmek için `flutter run` çalıştırın. Yalnız APK çıktısı almak için yukarıdaki `flutter build apk --debug ...` komutunu kullanın.
 
 Manuel kontrol: gerçek telefonda klavye/form kaydırma, şifre göster/gizle, uygulamayı tamamen kapatıp açınca oturum, çevrimdışı tekrar deneme/çıkış ve iOS Keychain. iOS derlemesi bu Windows ortamında doğrulanamaz. Android release imzası Flutter'ın geliştirme ayarıdır; mağaza dağıtımı bu görevin kapsamı değildir.

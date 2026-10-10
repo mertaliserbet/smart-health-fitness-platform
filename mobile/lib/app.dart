@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 
 import 'core/app_config.dart';
+import 'core/app_theme.dart';
 import 'features/auth/auth_service.dart';
 import 'features/auth/login_screen.dart';
-import 'features/home/home_screen.dart';
+import 'features/navigation/app_shell.dart';
 
 class SmartHealthFitnessApp extends StatefulWidget {
   const SmartHealthFitnessApp({super.key, required this.auth});
@@ -30,19 +31,7 @@ class _SmartHealthFitnessAppState extends State<SmartHealthFitnessApp> {
   Widget build(BuildContext context) => MaterialApp(
     title: AppConfig.appName,
     debugShowCheckedModeBanner: false,
-    theme: ThemeData(
-      useMaterial3: true,
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: const Color(0xFF4D8DFF),
-        brightness: Brightness.dark,
-        surface: const Color(0xFF121A2B),
-      ),
-      scaffoldBackgroundColor: const Color(0xFF0B1020),
-      inputDecorationTheme: const InputDecorationTheme(
-        border: OutlineInputBorder(),
-        errorMaxLines: 3,
-      ),
-    ),
+    theme: AppTheme.dark,
     home: ListenableBuilder(
       listenable: widget.auth,
       builder: (context, _) {
@@ -63,7 +52,7 @@ class _SmartHealthFitnessAppState extends State<SmartHealthFitnessApp> {
             ),
           ),
           AuthStatus.signedOut => LoginScreen(auth: auth),
-          AuthStatus.signedIn => HomeScreen(auth: auth),
+          AuthStatus.signedIn => AppShell(auth: auth),
           AuthStatus.retry => Scaffold(
             appBar: AppBar(title: const Text('Oturum kontrolü')),
             body: SafeArea(
