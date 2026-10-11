@@ -239,6 +239,7 @@ try {
         -SecondToken $secondLogin.Body.accessToken -FirstUserId $userId -SecondUserId $secondId
     & (Join-Path $PSScriptRoot 'AssignmentChecks.ps1') -FirstToken $roleLogin.Body.accessToken `
         -SecondToken $secondLogin.Body.accessToken -FirstUserId $userId -SecondUserId $secondId
+    & (Join-Path $PSScriptRoot 'AdvisorWorkflowChecks.ps1') -OtherUserToken $secondLogin.Body.accessToken -OtherUserId $secondId
     $logoutBody = @{ refreshToken = $secondLogin.Body.refreshToken }
     $forbidden = Invoke-Api 'POST' '/api/auth/logout' $logoutBody $roleLogin.Body.accessToken
     Assert-Check ($forbidden.Status -eq 403 -and $forbidden.ContentType -eq 'application/problem+json') 'Cross-user logout must return 403 ProblemDetails.'

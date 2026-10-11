@@ -5,8 +5,42 @@ using SmartHealthFitness.Api.Entities;
 
 namespace SmartHealthFitness.Api.Services;
 
-public sealed class WorkoutService(AppDbContext dbContext)
+public sealed class WorkoutService(AppDbContext dbContext, AdvisorService advisorService)
 {
+    public async Task<Guid> CreateWorkoutPlanAsync(Guid userId, Guid trainerId, CreateWorkoutPlanRequest request,
+        CancellationToken cancellationToken)
+    {
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+        await advisorService.LockClientAsync(trainerId, userId, AdvisorType.Trainer, cancellationToken);
+        var exerciseIds = request.Days.SelectMany(day => day.Exercises).Select(item => item.ExerciseId!.Value).Distinct().ToArray();
+        // Catalog updates wait until the assignment commits; inactive exercises cannot be assigned.
+        var exercises = await dbContext.Exercises
+            .FromSqlInterpolated($"SELECT * FROM exercises WHERE id = ANY({exerciseIds}) FOR SHARE")
+            .AsNoTracking().ToArrayAsync(cancellationToken);
+        var activeIds = exercises.Where(exercise => exercise.IsActive).Select(exercise => exercise.Id).ToHashSet();
+        var errors = new Dictionary<string, string[]>();
+        for (var day = 0; day < request.Days.Length; day++)
+            for (var item = 0; item < request.Days[day].Exercises.Length; item++)
+                if (!activeIds.Contains(request.Days[day].Exercises[item].ExerciseId!.Value))
+                    errors[$"days[{day}].exercises[{item}].exerciseId"] = ["Egzersiz bulunamadı veya aktif değil."];
+        if (errors.Count != 0) throw new AssignmentRequestException(400, "Validation failed", errors);
+        var now = DateTime.UtcNow;
+        await dbContext.WorkoutPlans.Where(plan => plan.UserId == userId && plan.IsActive)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(plan => plan.IsActive, false)
+                .SetProperty(plan => plan.UpdatedAt, (DateTime?)now), cancellationToken);
+        var plan = new WorkoutPlan { UserId = userId, TrainerId = trainerId, Name = request.Name.Trim(),
+            Description = request.Description?.Trim(), StartDate = request.StartDate!.Value, EndDate = request.EndDate,
+            Days = request.Days.Select(day => new WorkoutDay { Name = day.Name.Trim(), DayNumber = day.DayNumber!.Value,
+                Weekday = Enum.Parse<Weekday>(day.Weekday), Description = day.Description?.Trim(),
+                Exercises = day.Exercises.Select(item => new WorkoutExercise { ExerciseId = item.ExerciseId!.Value,
+                    Order = item.Order!.Value, Sets = item.Sets, Reps = item.Reps, DurationSeconds = item.DurationSeconds,
+                    RestSeconds = item.RestSeconds, WeightKg = item.WeightKg, Notes = item.Notes?.Trim() }).ToList() }).ToList() };
+        dbContext.WorkoutPlans.Add(plan);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return plan.Id;
+    }
+
     public Task<WorkoutPlanSummaryResponse[]> GetWorkoutPlansAsync(Guid userId, CancellationToken cancellationToken) =>
         dbContext.WorkoutPlans.AsNoTracking().Where(plan => plan.UserId == userId)
             .OrderByDescending(plan => plan.IsActive).ThenByDescending(plan => plan.StartDate).ThenBy(plan => plan.Id)

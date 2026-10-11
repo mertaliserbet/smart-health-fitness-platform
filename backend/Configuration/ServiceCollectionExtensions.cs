@@ -31,6 +31,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<SmartHealthFitness.Api.Services.AdvisorService>();
         services.AddScoped<SmartHealthFitness.Api.Services.WorkoutService>();
         services.AddScoped<SmartHealthFitness.Api.Services.NutritionService>();
+        services.AddScoped<SmartHealthFitness.Api.Services.ExerciseService>();
 
         services.AddControllers(options =>
             options.ModelMetadataDetailsProviders.Add(new SystemTextJsonValidationMetadataProvider()))

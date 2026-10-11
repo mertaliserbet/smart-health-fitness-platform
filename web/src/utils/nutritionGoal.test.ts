@@ -12,6 +12,13 @@ const draft = {
   endDate: '',
 };
 describe('Beslenme hedefi tarih ve sayı sınırları', () => {
+  it('PostgreSQL hassasiyetine uygun değerleri kabul eder ve fazla basamağı göndermeden gösterir', () => {
+    expect(prepareNutritionGoal({ ...draft, proteinGrams: '0.29' }).errors).toEqual({});
+    expect(prepareNutritionGoal({ ...draft, proteinGrams: '0.291' }).errors.proteingrams).toBe(
+      'En fazla iki ondalık basamak gir.',
+    );
+    expect(prepareNutritionGoal({ ...draft, waterMl: '10000000000' }).errors.waterml).toBeTruthy();
+  });
   it('takvimde olmayan tarihi ve sonsuz sayıyı reddeder; sıfır ve ondalık hedefe izin verir', () => {
     expect(prepareNutritionGoal(draft).errors).toEqual({});
     expect(

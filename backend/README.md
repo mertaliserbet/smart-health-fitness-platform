@@ -1,4 +1,4 @@
-# Backend ve authentication
+# Backend API
 
 **Yapay Zekâ Destekli Sağlık ve Fitness Platformu** için tek ASP.NET Core Web API projesi.
 
@@ -100,7 +100,8 @@ docker compose -f backend/docker-compose.yml stop
 | `Controllers/AuthController.cs`, `UsersController.cs`, `Contracts/` | HTTP akışı, validation ve request/response sözleşmeleri. |
 | `Configuration/AuthenticationDocumentFilter.cs` | Swagger'da yalnızca korunan işlemlere Bearer gereksinimi ekler. |
 | `Migrations/`, `../.config/dotnet-tools.json` | EF migration ve sürümü sabitlenmiş yerel EF CLI. |
-| `tests/AuthSmoke.ps1` | Ayrı PostgreSQL servisiyle auth entegrasyon kontrolleri. |
+| `Services/AdvisorService.cs`, `WorkoutService.cs`, `NutritionService.cs`, `ExerciseService.cs` | Danışan ilişkileri, program/hedef atamaları ve egzersiz kataloğu. |
+| `tests/AuthSmoke.ps1` | Ayrı PostgreSQL servisiyle auth, tracking ve danışman iş akışı entegrasyon kontrolleri. |
 | `appsettings*.json`, `Properties/launchSettings.json` | Gizli olmayan ayarlar ve yerel HTTP çalıştırma profili. |
 | `docker-compose.yml` | Yalnızca yerel PostgreSQL servisi. |
 
@@ -171,8 +172,29 @@ Script restore/build yapar, rastgele geçici credential kullanır, ayrı bir Pos
 
 Tüm yanıtlar `no-store` kullanır. Kullanıcı kimliği JWT `sub` claim'inden alınır; query ile `userId` seçilemez. Beslenme hedefinde cihazın takvim tarihi gönderilir; tarih yoksa UTC gün kullanılır, sınırlar dahildir. Tek aktif program/hedef ve tek haftanın günü DB indeksleriyle korunur.
 
-Admin atama, Trainer program oluşturma, Dietitian hedef oluşturma ve görev/not yazma endpointleri bu çalışmada eklenmedi. Web'in yazma akışları bunları bekler; bu okuma altyapısı mevcut web demo verisini gerçek atamaya dönüştürmez. Yeni servisler `AdvisorService`, `WorkoutService`, `NutritionService`; paylaşılan DTO'lar `Contracts/AssignmentContracts.cs` içindedir.
+### Web danışman iş akışı
 
-`AuthSmoke.ps1`, `AssignmentChecks.ps1` ile gerçek PostgreSQL'de boş/atanmış kullanıcıyı, DTO/enum/tarih biçimlerini, sahiplik/rol ve biten danışman ilişkisi erişimini, beslenme hedefi geçerlilik sınırlarını, validation ve DB benzersiz indekslerini de test eder. `AssignmentFixture.ps1` yalnız geçici veritabanına test atamaları ekler. İlerideki yazma servisleri bu entity'leri kullanmalı, alternatif tablo/model oluşturmamalıdır.
+| Endpoint | Başarı | Yetki |
+|---|---|---|
+| `GET /api/trainers/me/clients` | `200` aktif danışan listesi | Trainer |
+| `GET /api/dietitians/me/clients` | `200` aktif danışan listesi | Dietitian |
+| `GET /api/users/{userId}` | `200` profil | Atanmış Trainer/Dietitian veya Admin |
+| `GET /api/users?page=1&pageSize=20` | `200` sayfalı kullanıcı özeti | Admin |
+| `GET /api/user-advisors?userId={userId}` | `200` ilişki geçmişi | Admin |
+| `POST /api/user-advisors` | `201` oluşturulan ilişki | Admin |
+| `PATCH /api/user-advisors/{userAdvisorId}` | `200` sonlandırılan ilişki | Admin |
+| `GET /api/exercises` | `200` aktif katalog | Bearer JWT |
+| `GET /api/exercises/{exerciseId}` | `200` detay | Bearer JWT; pasif kayıt yalnız Admin |
+| `POST /api/exercises`, `PUT /api/exercises/{exerciseId}` | `201` / `200` detay | Admin |
+| `GET/POST /api/users/{userId}/workout-plans` | `200` liste / gövdesiz `201` + Location | Atanmış Trainer |
+| `GET/POST /api/users/{userId}/nutrition-goals` | `200` liste / `201` oluşturulan hedef | Atanmış Dietitian |
+
+Bu endpointler mevcut `AddMobileAssignmentReads` tablolarını kullanır; ek migration gerekmez. Yeni program veya hedef ataması, önceki aktif kaydı aynı transaction içinde pasifleştirir ve geçmişi korur. Danışan satırı kilidi eşzamanlı atamaları ve Admin ilişki sonlandırmasını sıralar. Atama kimliği request'ten seçilemez; Trainer/Dietitian JWT'den alınır. Geçersiz gün/egzersiz sırası, eksik hedefler, pasif egzersiz, tarih aralığı ve sayı hassasiyeti `400` alan hatası verir. Başka danışanın kaydı veya sonlanan ilişki `404`, uygun olmayan rol `403`, yinelenen aktif danışman ilişkisi `409` döner. Yanıtlar `no-store` kullanır.
+
+Admin kullanıcı özeti kişisel sağlık alanlarını içermez; Admin'in profil okumasında doğum tarihi, cinsiyet ve boy yalnız aynı hesaba ayrıca aktif danışman ilişkisi varsa döner. Admin ilişki yönetimi `UserAdvisorManagementResponse`, mobil rehber okuması mevcut `UserAdvisorResponse` kullanır. Ayrıntılı request/response sözleşmeleri `docs/API_CONTRACT.md` içindedir.
+
+Trainer/Dietitian/Admin hesabı otomatik oluşturulmaz. Public register yalnız `User` üretir; ilk yetkili hesabın rolü güvenilir geliştirme/dağıtım kurulumu sırasında verilmelidir. Rol yönetimi endpointi, görev/not yazma ve program düzenleme hâlâ beklemektedir. Web'deki mevcut danışan, program ve beslenme atama ekranları gerçek API ile çalışır; Admin ilişki ve katalog yazma işlemleri şimdilik API/Swagger üzerinden yapılır.
+
+`AuthSmoke.ps1`, `AssignmentChecks.ps1` ile gerçek PostgreSQL'de boş/atanmış kullanıcıyı, DTO/enum/tarih biçimlerini, sahiplik/rol ve biten danışman ilişkisi erişimini, beslenme hedefi geçerlilik sınırlarını, validation ve DB benzersiz indekslerini de test eder. `AssignmentFixture.ps1` yalnız geçici veritabanına test atamaları ekler. `AdvisorWorkflowChecks.ps1` aynı geçici ortamda farklı rollerde hesaplar oluşturur; Admin ilişki/katalog yönetimi → Trainer programı → Dietitian hedefi → mobil okuma akışını gerçek HTTP ile doğrular. Alan hataları, sağlık alanlarının Admin'den gizlenmesi, pasif egzersizler, eşzamanlı ilişki/program/hedef atamaları ve sonlanan ilişkide erişimin kesilmesi de kontrol edilir. Test hesapları ve roller yalnız geçici veritabanında tutulur.
 
 Kullanılan framework bileşenleri: [JWT bearer authentication](https://learn.microsoft.com/en-us/aspnet/core/security/authentication/configure-jwt-bearer-authentication?view=aspnetcore-10.0), [ASP.NET Core password hashing](https://learn.microsoft.com/en-us/aspnet/core/security/data-protection/consumer-apis/password-hashing?view=aspnetcore-10.0).
