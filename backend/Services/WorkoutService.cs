@@ -20,6 +20,8 @@ public sealed class WorkoutService(AppDbContext dbContext, AdvisorService adviso
         var plan = await dbContext.WorkoutPlans.Include(value => value.Days).ThenInclude(day => day.Exercises)
             .AsSplitQuery().SingleAsync(value => value.Id == planId, ct);
         if (!plan.IsActive) throw AssignmentException.Conflict("Geçmiş program düzenlenemez. Yeni bir program ata.");
+        if (await dbContext.WorkoutSessions.AnyAsync(session => session.WorkoutPlanId == planId, ct))
+            throw AssignmentException.Conflict("Bu programla antrenman başlatılmış. Geçmişi korumak için yeni bir program ata.");
         if (request.ExpectedUpdatedAt?.UtcDateTime != plan.UpdatedAt)
             throw AssignmentException.Conflict("Program başka bir ekranda değişti. Güncel programı açıp yeniden düzenle.");
 
@@ -139,6 +141,7 @@ public sealed class WorkoutService(AppDbContext dbContext, AdvisorService adviso
                     day.Exercises.OrderBy(item => item.Order).ThenBy(item => item.Id)
                         .Select(item => new WorkoutExerciseResponse(item.Id, item.ExerciseId, item.Exercise.Name,
                             item.Order, item.Sets, item.Reps, item.DurationSeconds, item.RestSeconds, item.WeightKg, item.Notes))
-                        .ToArray())).ToArray(), plan.UpdatedAt);
+                        .ToArray())).ToArray(), plan.UpdatedAt,
+            await dbContext.WorkoutSessions.AnyAsync(session => session.WorkoutPlanId == plan.Id, cancellationToken));
     }
 }

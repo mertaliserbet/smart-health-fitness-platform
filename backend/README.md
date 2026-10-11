@@ -28,6 +28,14 @@ Mesafe GPS segmentlerinden backend'de hesaplanır; pace/hız duraklamalar hariç
 
 `PUT /api/workout-plans/{workoutPlanId}` uygulanmıştır. Oluşturan Trainer + aktif danışan ilişkisi zorunludur; geçmiş program düzenlenmez. Tam içerik `UpdateWorkoutPlanRequest` ile gönderilir; korunan gün/egzersiz kimlikleri ve GET'ten gelen nullable `updatedAt` sürümü kullanılır. Eski sürüm `409` döner; işlem yeni plan oluşturmaz. Yeni migration yoktur. Ayrıntılar `docs/API_CONTRACT.md` 15.5'tedir. `AuthSmoke.ps1` içindeki `WorkoutPlanEditChecks.ps1`, gerçek PostgreSQL'de yetki, validation/rollback, yedi gün/sıra değişimi, kimliklerin korunması, pasif katalog, eşzamanlı düzenleme ve mobil okumaları doğrular.
 
+## Antrenman oturumları ve egzersiz kayıtları
+
+`AddWorkoutSessionsAndLogs` yalnız `workout_sessions` ve `workout_logs` tablolarını ekler. Kullanıcı kendi aktif programında oturum başlatır, günündeki egzersizleri PUT ile kaydeder ve oturumu tamamlar/iptal eder. Açık oturum tekrar başlatılınca aynı kimlik döner; tamamla/iptal tekrarları güvenlidir. Kullanıcı başına tek açık oturum ve oturum/egzersiz başına tek log DB unique indexleriyle korunur. Trainer sadece aktif bağlı danışanın geçmişini/detayını okur; User adına yazamaz. Sözleşme: `docs/API_CONTRACT.md` bölüm 16.
+
+Program ilk oturumundan sonra düzenlenmez; yeni program atanır. `WorkoutPlanResponse.hasSessions` web formunu buna göre kapatır; FK RESTRICT geçmişin silinmesini engeller. Eski programda açık oturum bitirilebilir. Tamamlama tüm egzersizlerin yapıldığı anlamına gelmez; web hedef/gerçekleşen ve eksik egzersizleri ayrı gösterir. Mobil ekran entegrasyonu Mert'in sorumluluğundadır; adımlar `docs/WORKOUT_SESSION_INTEGRATION.md` içindedir.
+
+`AuthSmoke.ps1` içindeki `WorkoutSessionChecks.ps1` gerçek PostgreSQL'de sahiplik/rol, validation, yeniden gönderim, eşzamanlı başlatma/log/tamamlama/program düzenleme, kısmi ilerleme, program değiştirme, sayfalama ve bitmiş/pasif ilişkileri sınar.
+
 ## Gereksinimler
 
 - .NET 10 SDK

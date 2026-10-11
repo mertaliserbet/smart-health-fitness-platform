@@ -546,6 +546,7 @@ describe('Trainer program düzenleme akışı', () => {
 
   it.each([
     ['geçmiş', { isActive: false }, 'Geçmiş program'],
+    ['oturum başlatılmış', { hasSessions: true }, 'Bu programla antrenman başlatılmış'],
     ['başka oluşturan', { trainerId: 'other-trainer' }, 'Yalnızca oluşturduğun'],
     ['başka danışan', { userId: otherClientId }, 'seçili danışana ait değil'],
     ['eksik sürüm', { updatedAt: undefined }, 'güncel sürümü alınamadı'],
@@ -568,6 +569,16 @@ describe('Trainer program düzenleme akışı', () => {
       expect(!!screen.queryByRole('link', { name: 'Programı düzenle' })).toBe(isActive);
     },
   );
+
+  it('oturum başlatılmış programda düzenlemeyi gizler ve yeni program yolunu gösterir', async () => {
+    mockApi({ detail: { ...editablePlan(), hasSessions: true } });
+    renderApp(`/programlar/${clientId}/${planId}`);
+    await login();
+    await screen.findByRole('heading', { name: 'Mevcut kuvvet programı' });
+    expect(screen.queryByRole('link', { name: 'Programı düzenle' })).not.toBeInTheDocument();
+    expect(screen.getByText(/Geçmişi korumak için değişiklikleri/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Yeni program' })).toBeInTheDocument();
+  });
 
   it.each(['Admin', 'Dietitian'])('%s düzenleme rotasına erişemez', async (role) => {
     const fetchMock = mockApi({ roles: [role], detail: editablePlan() });

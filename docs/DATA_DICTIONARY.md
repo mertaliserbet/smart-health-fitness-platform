@@ -489,6 +489,8 @@ kullanılabilir.
 
 # 15. WorkoutSession
 
+V1 uygulanmıştır. User/Plan/Day FK'leri `RESTRICT`; sahiplik ve gün/program eşleşmesi API'de doğrulanır. Status string olarak `InProgress`, `Completed`, `Cancelled` saklanır; `Planned` ayrılmıştır, V1 DB kontrolü kabul etmez. Kullanıcı başına tek `InProgress` için filtreli unique index vardır. `StartedAt` sunucu UTC; `CompletedAt` yalnızca Completed durumunda dolu ve başlangıçtan önce olamaz. `Notes` nullable ayrılmış alandır, V1 oturum notu yazmaz; egzersiz notları WorkoutLog'dadır. Oturum başlatılan programın içeriği değiştirilemez; yeni program atanır. Gün/egzersiz hedefleri ve eski oturumlar korunur. İptal fiziksel silme yapmaz.
+
 **Amaç:** Kullanıcının gerçekleştirdiği tek bir antrenman oturumunu temsil eder.
 
 **Tablo:** `workout_sessions`
@@ -518,6 +520,8 @@ Cancelled
 ---
 
 # 16. WorkoutLog
+
+V1 uygulanmıştır. `WorkoutSessionId`/`WorkoutExerciseId` çifti unique; bir egzersizin gerçek set/tekrar veya süre değerleri aynı logda güncellenir. FK'ler `RESTRICT`; silme endpointi yoktur. Sayısal alanlar nullable ve negatif olamaz. `WeightKg numeric(10,2)`; sıfır desteklenir. `CompletedReps` set başına tekrar sayısıdır; ayrı set kayıtları V1 kapsamında değildir. `IsCompleted` zorunlu; tamamlandı işaretinde hedef türüne uygun değerler pozitif olmalıdır (API doğrulaması). `Notes` nullable, en fazla 10000 karakter. `CreatedAt` sunucu UTC, güncellemelerde korunur. Terminal oturum logları değiştirilemez. Oturumun Completed olması tüm egzersizlerin tamamlandığı anlamına gelmez; yapılmayan egzersizler de detayda gösterilir.
 
 **Amaç:** Kullanıcının gerçekleştirdiği egzersiz bazlı antrenman kayıtlarını temsil eder.
 

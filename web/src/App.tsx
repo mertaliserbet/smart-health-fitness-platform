@@ -14,6 +14,7 @@ import { WorkoutPlans } from './pages/WorkoutPlans';
 import { WorkoutPlanCreate } from './pages/WorkoutPlanCreate';
 import { WorkoutPlanDetail } from './pages/WorkoutPlanDetail';
 import { WorkoutPlanEdit } from './pages/WorkoutPlanEdit';
+import { WorkoutSessions, WorkoutSessionDetail } from './pages/WorkoutSessions';
 import { NutritionGoals } from './pages/NutritionGoals';
 import { NutritionGoalCreate } from './pages/NutritionGoalCreate';
 import type { WebRole } from './types/api';
@@ -55,6 +56,11 @@ export function App() {
           </Route>
           <Route path="/profil" element={<ProfilePage />} />
           <Route element={<RoleRoute allowed={['Trainer']} />}>
+            <Route path="/danisanlar/:userId/antrenmanlar" element={<WorkoutSessions />} />
+            <Route
+              path="/danisanlar/:userId/antrenmanlar/:sessionId"
+              element={<WorkoutSessionDetail />}
+            />
             <Route path="/programlar" element={<WorkoutPlans />} />
             <Route path="/programlar/:userId" element={<WorkoutPlans />} />
             <Route path="/programlar/:userId/yeni" element={<WorkoutPlanCreate />} />

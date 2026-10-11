@@ -48,14 +48,16 @@ export function WorkoutPlanDetail() {
                 <p className="muted">Haftalık antrenman günleri ve egzersiz hedefleri.</p>
               </div>
               <div className="row-actions">
-                {data.plan.isActive && data.plan.trainerId === user?.id && (
-                  <Link
-                    className="button primary"
-                    to={`/programlar/${userId}/${workoutPlanId}/duzenle`}
-                  >
-                    <Pencil size={17} aria-hidden="true" /> Programı düzenle
-                  </Link>
-                )}
+                {data.plan.isActive &&
+                  !data.plan.hasSessions &&
+                  data.plan.trainerId === user?.id && (
+                    <Link
+                      className="button primary"
+                      to={`/programlar/${userId}/${workoutPlanId}/duzenle`}
+                    >
+                      <Pencil size={17} aria-hidden="true" /> Programı düzenle
+                    </Link>
+                  )}
                 <Link className="button secondary" to={`/programlar/${userId}/yeni`}>
                   <Plus size={17} aria-hidden="true" />
                   Yeni program
@@ -63,6 +65,12 @@ export function WorkoutPlanDetail() {
               </div>
             </div>
             <section className="panel plan-overview">
+              {data.plan.hasSessions && (
+                <p>
+                  Bu programla antrenman başlatılmış. Geçmişi korumak için değişiklikleri yeni
+                  program olarak ata.
+                </p>
+              )}
               <span className={`plan-status ${data.plan.isActive ? 'active' : ''}`}>
                 {data.plan.isActive ? 'Aktif program' : 'Geçmiş program'}
               </span>

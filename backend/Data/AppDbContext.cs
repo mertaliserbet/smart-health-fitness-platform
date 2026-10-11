@@ -20,6 +20,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<WorkoutPlan> WorkoutPlans => Set<WorkoutPlan>();
     public DbSet<WorkoutDay> WorkoutDays => Set<WorkoutDay>();
     public DbSet<WorkoutExercise> WorkoutExercises => Set<WorkoutExercise>();
+    public DbSet<WorkoutSession> WorkoutSessions => Set<WorkoutSession>();
+    public DbSet<WorkoutLog> WorkoutLogs => Set<WorkoutLog>();
     public DbSet<NutritionGoal> NutritionGoals => Set<NutritionGoal>();
     public DbSet<NutritionRecord> NutritionRecords => Set<NutritionRecord>();
     public DbSet<RunningActivity> RunningActivities => Set<RunningActivity>();

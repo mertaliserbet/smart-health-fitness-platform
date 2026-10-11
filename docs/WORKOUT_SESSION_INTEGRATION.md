@@ -1,0 +1,13 @@
+# Mobil antrenman entegrasyonu
+
+Backend sahibi Uğur; Flutter başlatma/kaydetme/tamamlama ekranlarının sahibi Mert. Ana sözleşme `API_CONTRACT.md` bölüm 16'dır. Bu özellik program düzenleme PR'ı #8 üzerine kuruludur; birleşme sırası önce #8, sonra oturum özelliğidir. `AddWorkoutSessionsAndLogs` migration'ı çalıştırılmalıdır.
+
+1. Aktif program ve günün `WorkoutDay.id` değerini mevcut program detayından al. `POST /api/workout-sessions` gövdesi `{workoutPlanId, workoutDayId}`. Yeni kayıt 201; aynı açık gün 200 ve aynı ID. Başka açık gün/program varsa 409; yeni oturum açmadan önce mevcut oturumu bitir veya iptal et.
+2. Uygulama açılışında `GET /api/users/me/workout-sessions?status=InProgress` yanıtının `items` listesinden açık oturumu bul. `GET /api/workout-sessions/{id}` hem hedefleri (`day.exercises`) hem gerçek kayıtları (`logs`) döner; devam ekranı için kullan.
+3. `PUT /api/workout-sessions/{id}/exercises/{workoutExerciseId}` ile kaydet. URL'de katalog Exercise ID'sini kullanma. Set/tekrar hedefinde `completedSets`, `completedReps`; süre hedefinde `durationSeconds` gönder. İki türü karıştırma. `isCompleted` zorunlu; tamamlandıysa uygun değerler pozitif olmalı. Nullable alanlar ve ağırlıkta sıfır desteklenir. PUT tüm gerçek alanları değiştirir; aynı egzersiz için log çoğalmaz. `completedReps` set başına tekrar sayısıdır.
+4. `POST /api/workout-sessions/{id}/complete` veya `/cancel`, body olmadan gönder. Tekrarları güvenlidir; karşı terminal duruma geçiş ve terminal log değişimi 409. Complete, bütün egzersizleri otomatik tamamlamaz; yapılmayanlar geçmişte görünür. Cancel logları silmez.
+5. Geçmiş `GET /api/users/me/workout-sessions?page=1&pageSize=20` ile sayfalıdır (`items`, `page`, `pageSize`, `totalCount`, `totalPages`). Yeni program atanmış olsa da açık eski oturum sürdürülebilir. İlk oturumdan sonra programın hedefleri sabitlenir; Trainer yeni program atar. Program detayındaki ek `hasSessions` alanı eski mobil parser'ı değiştirmeyi gerektirmez.
+
+User yalnız kendi verisine yazabilir. Trainer sadece aktif bağlı danışanı okuyabilir; User adına yazamaz. Hatalar standart ProblemDetails/ValidationProblemDetails: 400 alan hatası, 401 oturum, 403 rol, 404 erişilemeyen kimlik, 409 durum çatışması. Başlangıç/bitiş saatleri sunucu UTC'dir; yeni oturumda aktif programın tarih aralığı UTC bugüne göre kontrol edilir. Haftanın günü zorlanmaz. API rotalarında kullanıcı kimliği/token gizli tutulmalıdır.
+
+Uğur'un Trainer web geçmişi; hedef/gerçekleşen, kısmi tamamlanma, kayıt bulunmayan egzersizler ve notları gösterir. Flutter ekranı bu PR kapsamında uygulanmamıştır. Gerçek API/PostgreSQL kontrolleri: `backend/tests/AuthSmoke.ps1` → `WorkoutSessionChecks.ps1`.

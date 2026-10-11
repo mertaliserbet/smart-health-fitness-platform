@@ -225,3 +225,4 @@ Assert-Check ((Invoke-Api 'GET' '/api/users/me/advisors' $null $clientUser.Token
 Assert-Check ((Invoke-Api 'GET' '/api/users/me/workout-plans' $null $clientUser.Token).Body.Count -eq 3) 'Relationship termination erased user history.'
 Write-Output 'PASS: real advisor management, client/profile access, catalog, web-to-mobile plan/goal assignment, validation, concurrent replacements and relationship termination.'
 & (Join-Path $PSScriptRoot 'WorkoutPlanEditChecks.ps1')
+& (Join-Path $PSScriptRoot 'WorkoutSessionChecks.ps1')

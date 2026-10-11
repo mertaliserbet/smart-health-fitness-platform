@@ -37,7 +37,9 @@ Admin, Kullanıcılar → kullanıcı profili → Danışmanları yönet ekranı
 
 Admin egzersiz yönetimi web ekranı katalog listeleme, oluşturma, düzenleme ve aktif/pasif durum yönetimini içerir.
 
-Aktif antrenman programı düzenleme uygulanmıştır. Kendi profilini güncelleme, rol değiştirme ve antrenman oturumu endpointleri henüz uygulanmamıştır. Test hesapları yalnız geçici PostgreSQL fixture'ında hazırlanır; uygulama başlangıcında örnek veri/hesap eklenmez.
+Aktif antrenman programı düzenleme uygulanmıştır. WorkoutSession/WorkoutLog backend ve Trainer web antrenman geçmişi uygulanmıştır (bölüm 16); mobil başlatma/kayıt/tamamlama ekranı Mert'in sonraki entegrasyon adımıdır.
+
+Kendi profilini güncelleme ve rol değiştirme henüz uygulanmamıştır. Test hesapları yalnız geçici PostgreSQL fixture'ında hazırlanır; uygulama başlangıcında örnek veri/hesap eklenmez.
 
 Base path:
 
@@ -1215,13 +1217,21 @@ Request DTO: `UpdateWorkoutPlanRequest`. PUT tam program içeriğini gönderir. 
 }
 ```
 
-Başarı: `200 WorkoutPlanResponse` JSON ve `Cache-Control: no-store`; detay/gün/egzersiz biçimi 15.3 ile aynıdır, `updatedAt` son kayıt zamanıdır. Sonraki mobil program listesi/detayı yeni aktif içeriği kullanır. `WorkoutSession/WorkoutLog` henüz uygulanmamıştır; o adımda oturumların hedef geçmişi ve silme kısıtları ayrıca ele alınacaktır. Bu özellik yeni migration gerektirmez.
+Başarı: `200 WorkoutPlanResponse` JSON ve `Cache-Control: no-store`; detay/gün/egzersiz biçimi 15.3 ile aynıdır, `updatedAt` son kayıt zamanıdır. Detay DTO'sunda ek `hasSessions` boolean bulunur; true ise program artık düzenlenemez (`409`) ve web yeni program atama yolunu gösterir. Sonraki mobil program listesi/detayı yeni aktif içeriği kullanır. Oturum geçmişi bölüm 16'da korunur. Program düzenleme kendi başına yeni migration gerektirmez; WorkoutSession/WorkoutLog özelliği iki tablo ekler.
 
 ---
 
 # 16. WORKOUT SESSION / LOG ENDPOINTLERİ
 
+V1 uygulanmıştır. Yazmalar yalnızca JWT `sub` sahibinin `User` rolüne açıktır; Trainer danışanın adına antrenman başlatamaz veya log değiştiremez. Token yok/geçersiz veya hesap pasifse `401`; gereken rol yoksa `403`. Başka kullanıcıya ait program/gün/oturum/egzersiz kimlikleri `404` döner. Cevaplar `Cache-Control: no-store` taşır. Request DTO'larında bilinmeyen alanlar (`userId`, `startedAt`, `status` vb.) `400 ValidationProblemDetails` ile reddedilir; validation alanları camelCase'tir.
+
+Şema: `workout_sessions` ve `workout_logs`. Kullanıcı başına tek `InProgress` oturum, oturum/egzersiz başına tek log vardır. Yazmalar, program düzenleme/atama ile aynı kullanıcı satırı kilidini kullanır. Herhangi bir oturum başlatılmış program (iptal dahil) artık PUT ile değiştirilemez (`409`); Trainer yeni program atar. Eski günler, hedefler ve loglar korunur. Egzersiz adı güncel katalogdan okunur; tarihsel ad snapshot'ı değildir.
+
+Yeni program atanması veya danışman ilişkisinin bitmesi açık oturumu silmez; kullanıcı eski oturumunu bitirebilir ve kendi geçmişini okuyabilir. Yeni oturum yalnızca kendi aktif ve UTC bugünün tarih aralığındaki programında açılır. Haftanın günü zorlanmaz; kullanıcı bir günü başka takvim gününde çalışabilir. `Planned` ayrılmıştır, V1 tarafından üretilmez.
+
 ## 16.1 Antrenman Oturumu Başlat
+
+Yeni oturum `201 WorkoutSessionResponse` ve `Location: /api/workout-sessions/{id}` döner. Aynı program/gün açıkken `200` ile aynı oturum döner; farklı gün/program açıkken `409`. Tekrar güvenliği açık oturum içindir; terminal oturumdan sonraki başlatma yeni oturum oluşturur. Program/gün UUID'leri zorunlu ve boş olamaz. Program/gün eşleşmez veya başkasına aitse `404`; pasif/henüz başlamamış/tarihi bitmiş program `409`. `startedAt` sunucu UTC zamanıdır.
 
 ```http
 POST /api/workout-sessions
@@ -1256,6 +1266,10 @@ Response:
 
 ## 16.2 Egzersiz Kaydı Ekle / Güncelle
 
+Yetki: `User`. `workoutExerciseId` katalog kimliği değil, oturumun günündeki `WorkoutExercise.id` değeridir. `isCompleted` zorunlu boolean; diğer alanlar nullable, `notes` en fazla 10000 karakterdir. Sayılar negatif olamaz; `weightKg` en fazla `99999999.99`, iki ondalık basamaktır; sıfır geçerlidir. Süre hedefinde set/tekrar, set/tekrar hedefinde süre girilemez. `isCompleted=true` için süre veya hem set hem tekrar pozitif olmalıdır. Gerçek değerler hedefin altında/üstünde olabilir. `completedReps` set başına tekrar sayısıdır; V1 ayrı set satırları tutmaz. Eksik ilerleme `isCompleted=false` ile saklanabilir.
+
+Başarılı PUT `200 WorkoutLogResponse`: `id`, `workoutExerciseId`, `completedSets`, `completedReps`, `weightKg`, `durationSeconds`, `isCompleted`, `notes`, `createdAt`. Tekrarlanan PUT mevcut logu günceller; `id`/`createdAt` korunur. Bitmiş/iptal oturumda `409`; başka günün egzersizinde `404`.
+
 ```http
 PUT /api/workout-sessions/{sessionId}/exercises/{workoutExerciseId}
 ```
@@ -1276,6 +1290,8 @@ Request:
 ---
 
 ## 16.3 Antrenmanı Tamamla
+
+Yetki: sahibi `User`; request body yoktur. `200 WorkoutSessionResponse`. Tamamlama oturumun bittiğini ifade eder; bütün egzersizlerin tamamlanması zorunlu değildir. Yapılan/atlanmış egzersizler ayrı gösterilir. `completedAt` sunucu UTC zamanıdır. Tekrarlanan complete aynı zamanı ve veriyi döner. İptal edilmiş oturumu tamamlamak `409`; terminal oturum logları değiştirilemez.
 
 ```http
 POST /api/workout-sessions/{sessionId}/complete
@@ -1308,6 +1324,26 @@ GET /api/users/{userId}/workout-sessions
 ```
 
 Trainer yalnızca bağlı danışanın verisini görebilir.
+
+İlişki aktif, danışan aktif ve `User`, danışman aktif ve `Trainer` olmalıdır. Atanmamış/bitmiş ilişkide Trainer listesi `403` döner. Dietitian/Admin rolleri bu geçmişe erişemez. Yeni atanmış Trainer bağlı danışanın eski Trainer programlarındaki geçmişi de okuyabilir.
+
+Query: `page` varsayılan 1 (1..1000000), `pageSize` varsayılan 20 (1..100), isteğe bağlı `status=InProgress|Completed|Cancelled` (büyük/küçük harfe duyarlı). Hatalı query `400`. Sonuç `200 PagedWorkoutSessionsResponse`: `{ "items": [], "page": 1, "pageSize": 20, "totalCount": 0, "totalPages": 0 }`. Sıra `startedAt`, ardından `id` azalandır. Item alanları: `id`, `userId`, `workoutPlanId`, `workoutDayId`, `planName`, `dayName`, `startedAt`, `completedAt`, `status`, `completedExerciseCount`, `totalExerciseCount`. Mobil açık oturumu `?status=InProgress` ile bulabilir. Query'de başka `userId` göndermek sahipliği değiştirmez.
+
+## 16.5 Oturum Detayı / Devam Etme
+
+```http
+GET /api/workout-sessions/{sessionId}
+```
+
+Yetki: sahibi `User` veya halen bağlı `Trainer`; başka oturum kimliği `404`. `200 WorkoutSessionResponse`: `id`, `userId`, `workoutPlanId`, `workoutDayId`, `planName`, `startedAt`, `completedAt` (nullable), `status`, `day` (mevcut `WorkoutDayResponse`, hedefler dahil), `logs` (`WorkoutLogResponse[]`). Kaydı olmayan egzersizler `day.exercises` içinde bulunur, `logs` içinde bulunmaz. Başlatma/tamamlama/iptal yanıtları da bu detay DTO'sunu döner; küçük örnekler temel alanları gösterir.
+
+## 16.6 Oturumu İptal Et
+
+```http
+POST /api/workout-sessions/{sessionId}/cancel
+```
+
+Yetki: sahibi `User`; body yoktur. `200 WorkoutSessionResponse`, `status=Cancelled`, `completedAt=null`. Loglar korunur; yeni oturum başlatılabilir. Tekrarlanan cancel aynı oturumu döner. Tamamlanmış oturumu iptal etmek `409`.
 
 ---
 
