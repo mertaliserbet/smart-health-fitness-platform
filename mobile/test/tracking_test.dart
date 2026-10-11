@@ -10,7 +10,7 @@ import 'package:smart_health_fitness_mobile/features/tracking/tracking_entry_scr
 import 'package:smart_health_fitness_mobile/features/tracking/tracking_models.dart';
 import 'package:smart_health_fitness_mobile/features/tracking/tracking_service.dart';
 
-import 'app_shell_test.dart' show openApp;
+import 'app_shell_test.dart' show openApp, emptyNutritionSummary;
 import 'auth_service_test.dart' show makeApi, jsonResponse, tokens, userJson;
 
 const weightPath = '/api/users/me/weight-records';
@@ -87,6 +87,12 @@ void main() {
         tester,
         handler: (request) async {
           requests.add(request.url.path);
+          if (request.url.path.endsWith('daily-summary')) {
+            return jsonResponse(emptyNutritionSummary());
+          }
+          if (request.url.path.endsWith('running-activities')) {
+            return jsonResponse([]);
+          }
           if (request.url.path == '/api/users/me') {
             return jsonResponse(userJson);
           }
@@ -143,11 +149,13 @@ void main() {
     await openTracking(tester);
     expect(
       find.text('İşlem tamamlanamadı. Lütfen tekrar deneyin.'),
-      findsOneWidget,
+      findsNWidgets(4),
     );
     expect(find.text('Henüz kilo kaydı yok'), findsNothing);
     failing = false;
-    await tester.tap(find.text('Tekrar dene'));
+    await tester.ensureVisible(find.text('Tekrar dene').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Tekrar dene').first);
     await tester.pumpAndSettle();
     expect(find.text('Henüz kilo kaydı yok'), findsOneWidget);
   });

@@ -9,6 +9,7 @@ import { PanelSelection } from './pages/PanelSelection';
 import { PeopleList } from './pages/PeopleList';
 import { ProfilePage } from './pages/ProfilePage';
 import { ExerciseCatalog } from './pages/ExerciseCatalog';
+import { ExerciseEdit } from './pages/ExerciseEdit';
 import { WorkoutPlans } from './pages/WorkoutPlans';
 import { WorkoutPlanCreate } from './pages/WorkoutPlanCreate';
 import { WorkoutPlanDetail } from './pages/WorkoutPlanDetail';
@@ -47,6 +48,8 @@ export function App() {
             <Route path="/danisanlar/:userId/gorevler" element={<ClientAssignments />} />
           </Route>
           <Route element={<RoleRoute allowed={['Admin']} />}>
+            <Route path="/egzersizler/yeni" element={<ExerciseEdit />} />
+            <Route path="/egzersizler/:exerciseId/duzenle" element={<ExerciseEdit />} />
             <Route path="/kullanicilar" element={<PeopleList />} />
             <Route path="/kullanicilar/:userId" element={<ProfilePage />} />
             <Route path="/kullanicilar/:userId/danismanlar" element={<AdvisorManagement />} />
@@ -66,6 +69,8 @@ export function App() {
               path="/programlar/:userId/:workoutPlanId/duzenle"
               element={<WorkoutPlanEdit />}
             />
+          </Route>
+          <Route element={<RoleRoute allowed={['Trainer', 'Admin']} />}>
             <Route path="/egzersizler" element={<ExerciseCatalog />} />
           </Route>
           <Route element={<RoleRoute allowed={['Dietitian']} />}>

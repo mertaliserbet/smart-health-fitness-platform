@@ -595,6 +595,88 @@
   font-size: 13px;
   line-height: 1.8;
 }
+.catalog-card h3,
+.catalog-card p {
+  overflow-wrap: anywhere;
+}
+.catalog-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.catalog-card .button {
+  margin-top: 10px;
+}
+.exercise-toolbar {
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.exercise-toolbar h2 {
+  margin-right: auto;
+}
+.exercise-status-filter {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+}
+.exercise-status-filter select {
+  min-width: 110px;
+}
+.exercise-form-panel {
+  max-width: 820px;
+  padding: 28px;
+}
+.exercise-form-fields {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 20px;
+}
+.exercise-form-fields .workout-field {
+  min-width: 0;
+  margin-bottom: 0;
+}
+.exercise-availability {
+  padding: 18px;
+  border-radius: 12px;
+  background: var(--card);
+  border: 1px solid var(--border);
+}
+.exercise-availability label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+  cursor: pointer;
+}
+.exercise-availability input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary);
+}
+.exercise-availability p {
+  line-height: 1.8;
+  font-size: 13px;
+  margin: 12px 0 0;
+}
+.exercise-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+  flex-wrap: wrap;
+}
+.exercise-form-panel .form-failure {
+  margin-top: 24px;
+}
+@media (max-width: 600px) {
+  .exercise-form-panel {
+    padding: 18px;
+  }
+}
 .catalog-help {
   padding: 0 24px 24px;
   text-align: center;

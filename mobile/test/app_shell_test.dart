@@ -14,6 +14,16 @@ import 'auth_service_test.dart' show makeApi, jsonResponse, tokens, userJson;
 
 const labels = ['Ana Sayfa', 'Planım', 'AI', 'Takip', 'Rehberim'];
 
+Map<String, dynamic> emptyNutritionSummary() => {
+  'date': DateTime.now().toIso8601String().substring(0, 10),
+  'recordCount': 0,
+  'consumedCalories': 0,
+  'consumedProteinGrams': 0,
+  'consumedCarbohydrateGrams': 0,
+  'consumedFatGrams': 0,
+  'goal': null,
+};
+
 Future<AuthService> openApp(
   WidgetTester tester, {
   bool savedSession = true,
@@ -25,7 +35,11 @@ Future<AuthService> openApp(
           return switch (request.url.path) {
             '/api/users/me' => jsonResponse(userJson),
             '/api/users/me/weight-records' ||
+            '/api/users/me/running-activities' ||
             '/api/users/me/body-measurements' => jsonResponse([]),
+            '/api/users/me/nutrition-records/daily-summary' => jsonResponse(
+              emptyNutritionSummary(),
+            ),
             '/api/users/me/workout-plans' ||
             '/api/users/me/advisors' ||
             '/api/users/me/tasks' ||
@@ -123,6 +137,8 @@ void main() {
         '/api/users/me/workout-plans',
         '/api/users/me/weight-records',
         '/api/users/me/body-measurements',
+        '/api/users/me/nutrition-records/daily-summary',
+        '/api/users/me/running-activities',
         '/api/users/me/advisors',
       ]);
     },

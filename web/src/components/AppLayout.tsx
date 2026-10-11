@@ -87,11 +87,13 @@ export function AppLayout() {
                 <ClipboardList size={19} aria-hidden="true" />
                 Antrenman Programları
               </NavLink>
-              <NavLink to="/egzersizler">
-                <Dumbbell size={19} aria-hidden="true" />
-                Egzersizler
-              </NavLink>
             </>
+          )}
+          {(role === 'Trainer' || admin) && (
+            <NavLink to="/egzersizler">
+              <Dumbbell size={19} aria-hidden="true" />
+              Egzersizler
+            </NavLink>
           )}
           {role === 'Dietitian' && (
             <NavLink to="/beslenme-hedefleri">
