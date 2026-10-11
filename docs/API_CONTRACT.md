@@ -29,29 +29,9 @@ Bu dosya aşağıdaki dokümanlarla birlikte değerlendirilmelidir:
 
 Mobil için `GET /api/users/me/advisors`, `/workout-plans`, `/nutrition-goals/active`, `/tasks`, `/advisor-notes` ve `GET /api/workout-plans/{workoutPlanId}` uygulanmıştır. `AddMobileAssignmentReads` migration'ı gerekli kalıcı veri altyapısını ekler. Flutter demo/stub veri kullanmadan bu endpointlerden okur. Listelerde kayıt yoksa `200 []`; geçerli aktif hedef yoksa ayırt edici kodla `404` döner.
 
-Trainer program oluşturma/atama, Dietitian hedef atama, bağlı danışana görev/not ekleme ve görev durumunu güncelleme uygulanmıştır. Web'in mevcut program/hedef formları gerçek API'yi kullanır; görev/not formuna Danışan Detayı → Görevler / Notlar yolundan ulaşılır. Mobil kullanıcı Planım → Görevler üzerinden kendi görevini tamamlar. Admin rol/ilişki atama ve egzersiz yönetimi bu çalışmanın kapsamı dışındadır; aşağıdaki diğer sözleşmeler otomatik olarak uygulanmış API sayılmaz. Uygulama başlangıcında örnek veri/hesap eklenmez.
+Web'in danışan listesi/detayı, Admin kullanıcı listesi ve danışman ilişkisi yönetimi, egzersiz kataloğu yönetimi, Trainer program oluşturma/listeleme ve Dietitian hedef oluşturma/listeleme endpointleri de uygulanmıştır. Mevcut `AdvisorService`, `WorkoutService`, `NutritionService` ve `AddMobileAssignmentReads` tabloları kullanılır; bu adım yeni migration oluşturmaz. Gerçek web oturumlarında atamalar PostgreSQL'e kaydedilir ve mevcut mobil okuma endpointlerinden görülebilir.
 
-### Uygulanmış danışan yazma akışı
-
-| Endpoint | Yetki | Başarı yanıtı |
-|---|---|---|
-| `GET /api/trainers/me/clients` | Trainer | `200 ClientSummaryResponse[]` |
-| `GET /api/dietitians/me/clients` | Dietitian | `200 ClientSummaryResponse[]` |
-| `GET /api/users/{userId}` | Bağlı Trainer/Dietitian veya Admin | `200 UserProfileResponse` |
-| `GET /api/exercises?search=...` | Giriş yapmış kullanıcı | `200 ExerciseResponse[]`, yalnız aktif katalog |
-| `GET /api/users/{userId}/workout-plans` | Bağlı Trainer | `200 WorkoutPlanSummaryResponse[]` |
-| `POST /api/users/{userId}/workout-plans` | Bağlı Trainer | `201 WorkoutPlanResponse`, `Location` detay adresi |
-| `GET /api/users/{userId}/nutrition-goals` | Bağlı Dietitian | `200 NutritionGoalResponse[]` |
-| `POST /api/users/{userId}/nutrition-goals` | Bağlı Dietitian | `201 NutritionGoalResponse` |
-| `GET /api/users/{userId}/tasks` | Bağlı Trainer/Dietitian | `200 UserTaskResponse[]` |
-| `POST /api/users/{userId}/tasks` | Bağlı Trainer/Dietitian | `201 UserTaskResponse` |
-| `GET /api/users/{userId}/advisor-notes` | Bağlı Trainer/Dietitian | `200 AdvisorNoteResponse[]` |
-| `POST /api/users/{userId}/advisor-notes` | Bağlı Trainer/Dietitian | `201 AdvisorNoteResponse` |
-| `PATCH /api/tasks/{taskId}` | Görev sahibi User veya görevi oluşturan aktif danışman | `200 UserTaskResponse` |
-
-`ClientSummaryResponse`: `id`, `firstName`, `lastName`, `relationshipStatus: "Active"`, `startDate`. `ExerciseResponse`: `id`, `name`, nullable `description`, `instructions`, `videoUrl`, `imageUrl`. Egzersiz okumasında şu anda yalnız `search` filtresi uygulanır; kas grubu filtrelemesi ve yönetim endpointleri uygulanmamıştır.
-
-Bağlı danışan yetkisi, `UserAdvisor.Status = Active`, ilgili `AdvisorType`, aktif danışan hesabındaki `User` rolü ve aktif danışman hesabının veritabanındaki gerçek rolüyle doğrulanır. Yetkisiz/bağsız danışan işlemi `403 ProblemDetails`; anonim istek `401`; validation `400 ValidationProblemDetails` döner. Advisor/Trainer/Dietitian kimlikleri JWT'den alınır. POST/PATCH gövdelerinde bilinmeyen alanlar reddedilir; istemci kimlik veya başlangıç durumunu değiştiremez. Yazmalar transaction içinde yapılır; aynı kullanıcıya eşzamanlı atamalar sırayla işlenir. Hatalı atama önceki aktif kaydı değiştirmez.
+Bağlı danışana görev/not ekleme ve görev durumunu güncelleme uygulanmıştır. Web formuna Danışan Detayı → Görevler / Notlar yolundan ulaşılır; mobil kullanıcı Planım → Görevler üzerinden kendi görevini tamamlar. Kendi profilini güncelleme, rol değiştirme, program düzenleme ve antrenman oturumu endpointleri henüz uygulanmamıştır. Admin ilişki/egzersiz yönetiminin web ekranları ayrı bir adımdır; mevcut API işlemleri Swagger üzerinden kullanılabilir. Test hesapları yalnız geçici PostgreSQL fixture'ında hazırlanır; uygulama başlangıcında örnek veri/hesap eklenmez.
 
 Base path:
 
@@ -519,6 +499,8 @@ Assigned Dietitian
 
 Trainer/Dietitian yalnızca yetkili olduğu danışanları görüntüleyebilir.
 
+Uygulanmıştır; response mevcut `UserProfileResponse` alanlarıdır (9.1). Bu endpoint danışan/hesap yönetimi kapsamındadır; `/api/users/me` ve auth servisi değiştirilmez. Danışman için aktif hesap, ilgili rol ve `Active` ilişki gerekir. Danışman için aktif bağlantı bulunmayan danışan `403 ProblemDetails` ile yanıtlanır; Admin için bulunamayan kullanıcı `404` döner. Salt Admin erişiminde `birthDate`, `gender`, `heightCm` alanları `null` döner; Admin'in sağlık verisine erişimi yoktur. Admin ayrıca ilgili danışmana atanmış Trainer/Dietitian ise danışman yetkisi geçerlidir. Yanıt `no-store` içerir.
+
 ---
 
 # 10. ADMIN USER ENDPOINTLERİ
@@ -543,6 +525,8 @@ pageSize
 role
 search
 ```
+
+Uygulanmıştır; response bölüm 7'deki sayfalama zarfıdır. `items`, `id`, `firstName`, `lastName`, `email`, `roles` alanlarını taşır; parola/token/sağlık alanları dönmez. Pasif hesaplar da yönetim listesinde bulunur. `page` varsayılan 1 (1–1000000), `pageSize` varsayılan 20 (1–100); sınır dışı değer `400` döner. `role`, tam olarak User/Trainer/Dietitian/Admin olmalıdır; `search` en fazla 200 karakterdir ve isim/e-posta içerik araması yapar. Sonuçlar soyad, ad ve ID sırasındadır. Boş sonuçta `items: []`, `totalPages: 0` döner. Yanıt `no-store` içerir.
 
 ---
 
@@ -633,6 +617,8 @@ Trainer
 
 Yalnızca `Active` `UserAdvisor` ilişkileri listelenir.
 
+Uygulanmıştır; `ClientSummaryResponse[]`, `200 []` dahil, `no-store` ile döner. Kullanıcı ve danışman aktif olmalı, kullanıcı User rolünü ve danışman ilgili danışman rolünü korumalıdır. Soyad, ad ve kullanıcı ID'sine göre sıralanır; query'deki başka advisor/user ID'si erişimi genişletmez.
+
 Response:
 
 ```json
@@ -663,6 +649,8 @@ Dietitian
 
 Yalnızca `Active` `UserAdvisor` ilişkileri listelenir.
 
+Uygulanmıştır; response ve filtre kuralları 11.2 ile aynıdır; ilişki tipi Dietitian olmalıdır.
+
 Admin, atama ekranında danışman adaylarını mevcut `GET /api/users?role=Trainer` veya `?role=Dietitian` çağrılarıyla bulur.
 
 ## 11.3.1 Admin'in Kullanıcı-Danışman İlişkilerini Getirmesi
@@ -673,7 +661,7 @@ GET /api/user-advisors?userId={userId}
 
 Yetki: `Admin`. Yanıt, seçilen kullanıcının `Active`, `Ended` ve `Cancelled` ilişkilerini `userAdvisorId`, `advisorId`, `advisorType`, `status`, `startDate` ve `endDate` alanlarıyla listeler. Bu liste Admin'in mevcut atamayı görüp sonlandırması içindir.
 
-Response DTO: `UserAdvisorResponse[]`. Her öğe ayrıca `userId` içerir. `GET /api/users?role=Trainer` ve `?role=Dietitian` ile seçilen danışmanların rolleri backend tarafından doğrulanır.
+Response DTO: `UserAdvisorManagementResponse[]`. Her öğe ayrıca `userId` içerir. Admin'in bu yeni DTO'su, mobilin isim ve profil alanları taşıyan mevcut `UserAdvisorResponse` yapısını değiştirmez. `GET /api/users?role=Trainer` ve `?role=Dietitian` ile seçilen danışmanların rolleri backend tarafından doğrulanır. Uygulanmıştır; `userId` zorunludur, kayıt yoksa `200 []` döner. Yanıt `no-store` içerir.
 
 ---
 
@@ -695,7 +683,7 @@ Request DTO:
 CreateUserAdvisorRequest
 ```
 
-Response DTO: `UserAdvisorResponse`.
+Response DTO: `UserAdvisorManagementResponse` (Admin yönetimi).
 
 Request:
 
@@ -728,6 +716,8 @@ Response:
 
 V1'de atama yalnızca Admin tarafından yapılır ve doğrudan `Active` oluşturulur. `startDate` atama günüdür; gelecekte tarihli davet/planlı aktivasyon V1'de yoktur. Aynı kullanıcı-danışman çifti için ikinci aktif ilişki oluşturulamaz (`409 Conflict`).
 
+Uygulanmıştır; iki farklı aktif hesap gerekir: danışan User rolüne, danışman `advisorType` ile belirtilen role sahip olmalıdır. `advisorType` tam olarak Trainer/Dietitian string değeridir. `startDate` zorunludur ve atama gününün UTC takvim tarihi olmalıdır; geçmiş/gelecek tarih `400` döner. Bilinmeyen alanlar reddedilir (`400`). Aynı danışana eşzamanlı yazma işlemleri kullanıcı satırı kilidiyle sıralanır; DB benzersiz indeksi ikinci aktif ilişkiyi ayrıca engeller. Başarı `201` JSON yanıtı ve kullanıcıya göre ilişki listesi için `Location` header'ıdır.
+
 ---
 
 ## 11.5 Danışman İlişkisini Güncelle
@@ -752,6 +742,8 @@ Request:
 ```
 
 V1'de `status` yalnızca `Ended` veya `Cancelled` olabilir. `endDate` zorunludur; `Pending` ve kullanıcı onayı akışı yoktur. Başarı yanıtı `200 OK` ile güncel ilişkiyi döner.
+
+Uygulanmıştır; response `UserAdvisorManagementResponse`. Bitiş tarihi başlangıçtan önce veya gelecekte olamaz. Aynı durum/tarihle tekrar gönderim idempotenttir; bitmiş ilişkiyi başka duruma/tarihe değiştirme veya tekrar aktifleştirme `409`/`400` döner. Yeni atama ve ilişkiyi sonlandırma aynı danışan kilidini kullanır; sonlandırma tamamlandıktan sonra danışman yeni plan/hedef kaydedemez. Geçmiş planlar/hedefler silinmez ve kullanıcının kendi okuma erişimi devam eder.
 
 ---
 
@@ -954,6 +946,8 @@ search
 muscleGroupId
 ```
 
+Uygulanmıştır; `ExerciseResponse[]`, yalnız aktif egzersizler, ad/ID sıralaması ve `no-store` ile döner. `search` en fazla 200 karakterdir. `MuscleGroup` tabloları henüz yoktur; `muscleGroupId` gönderilirse bu aşamada `400` ve `errors.muscleGroupId` döner. Bu filtre sessizce yok sayılmaz.
+
 Response:
 
 ```json
@@ -962,6 +956,7 @@ Response:
     "id": "1dd55d43-ee46-4769-94e0-bad9fcf79df1",
     "name": "Bench Press",
     "description": "Chest exercise",
+    "instructions": null,
     "videoUrl": null,
     "imageUrl": null
   }
@@ -975,6 +970,8 @@ Response:
 ```http
 GET /api/exercises/{exerciseId}
 ```
+
+Uygulanmıştır; Authenticated. `ExerciseDetailResponse`, 14.1 alanlarına ek olarak bool `isActive` içerir; nullable `instructions` katalog listesinde de bulunur. Admin pasif egzersizi de okuyabilir; diğer kullanıcılar için pasif/bulunamayan egzersiz `404` döner.
 
 ---
 
@@ -990,6 +987,8 @@ Yetki:
 Admin
 ```
 
+Uygulanmıştır. Request `CreateExerciseRequest`: `name` (zorunlu, en fazla 200), nullable `description` (10000), `instructions` (20000), `videoUrl`/`imageUrl` (geçerli URL, 2048), `isActive` (varsayılan true). Bilinmeyen alanlar reddedilir. Başarı `201` + `ExerciseDetailResponse`, `Location: /api/exercises/{exerciseId}`. Uygulama kataloğa otomatik örnek kayıt eklemez.
+
 ---
 
 ## 14.4 Egzersiz Güncelle
@@ -1003,6 +1002,8 @@ Yetki:
 ```text
 Admin
 ```
+
+Uygulanmıştır; tam güncelleme gövdesi 14.3 ile aynıdır (`CreateExerciseRequest` yeniden kullanılır). Başarı `200 ExerciseDetailResponse`, bulunamayan ID `404`. Pasifleştirme egzersizi silmez; geçmiş programlarda adı/detayı korunur, yeni programda seçilemez.
 
 ---
 
@@ -1037,6 +1038,8 @@ Yetki:
 ```text
 Assigned Trainer
 ```
+
+Uygulanmıştır; `WorkoutPlanSummaryResponse[]`, aktif ve geçmiş kayıtlar, 15.1 sıralama/alanları ve `no-store`. Aktif danışman ilişkisi olmayan veya pasif danışan `403` döner. Dietitian/Admin rolü bu erişimi sağlamaz.
 
 ---
 
@@ -1150,7 +1153,11 @@ Response:
 201 Created
 ```
 
-Başarı gövdesi 15.3'teki `WorkoutPlanResponse` alanlarını içerir. `name` ve gün adı zorunlu, en fazla 200 karakterdir. `startDate` zorunlu; `endDate` varsa başlangıçtan önce olamaz. `days` 1–7 öğe, her gün en az bir aktif katalog egzersizi içermelidir. `weekday` zorunludur ve `Monday`–`Sunday` string değerlerinden biridir. `dayNumber` pozitif ve program içinde benzersizdir; yalnız sıralama içindir. Aynı plandaki iki gün aynı `weekday` değerini alamaz (`400`). Egzersiz `order` pozitif ve gün içinde benzersizdir; `sets`, `reps`, `durationSeconds` varsa pozitif tamsayıdır. Set+tekrar veya süre gereklidir; `restSeconds` varsa sıfır/pozitif tamsayı; `weightKg` varsa 0–99999999.99, en fazla iki ondalık basamaktır. V1'de yeni aktif plan önceki aktif planı aynı transaction içinde pasifleştirir ve geçmişi korur. Program güncelleme `PUT` endpointi henüz uygulanmamıştır.
+`weekday` zorunludur ve `Monday`–`Sunday` string değerlerinden biridir. `dayNumber` yalnızca program içi sıralamadır. Aynı plandaki iki gün aynı `weekday` değerini alamaz (`400 Bad Request`). V1'de yeni aktif plan önceki aktif planı pasifleştirir. Program güncelleme PUT endpointi henüz uygulanmamıştır.
+
+POST uygulanmıştır. Başarı `201 WorkoutPlanResponse` JSON yanıtı ve `Location: /api/workout-plans/{workoutPlanId}`. Trainer kimliği JWT'den alınır; request'te `trainerId`/`userId` veya bilinmeyen alan `400` döner. `name` ve gün adları 1–200 karakter; açıklamalar/notlar en fazla 10000; zorunlu `startDate`, nullable `endDate >= startDate`. 1–7 gün, her günde 1–100 egzersiz gerekir. Gün sıra numaraları plan içinde, egzersiz `order` değerleri gün içinde benzersiz ve pozitif tam sayı olmalıdır.
+
+Hedef ya pozitif tam sayı `sets` + `reps`, ya pozitif tam sayı `durationSeconds` olmalıdır; iki biçim birlikte veya hedef olmadan `400` döner. `restSeconds` nullable ve negatif olmayan tam sayıdır. `weightKg` nullable, 0–99999999.99 aralığında ve en fazla iki ondalık basamaklıdır; bu DB depolama sınırıdır. Egzersiz ID'leri var ve aktif olmalıdır; geçersiz seçim `errors.days[0].exercises[0].exerciseId` gibi alan hatası üretir. Validation/ilişki hatası eski aktif planı değiştirmez. Önceki planın pasifleştirilmesi ve yeni plan/gün/egzersiz kaydı aynı transaction'dadır. Eşzamanlı atamalarda danışan satırı kilitlenir; her tamamlanan istek `201`, en son kaydedilen plan aktiftir. Bağsız/pasif danışan veya yanlış rol `403` döner.
 
 ---
 
@@ -1432,6 +1439,8 @@ Yetki:
 Assigned Dietitian
 ```
 
+Uygulanmıştır; `NutritionGoalResponse[]`, aktif önce, oluşturma tarihi azalan ve ID sıralaması. 19.1 alanları kullanılır, boş liste `200 []`. Aktif ilişki ve aktif User danışan zorunludur; aktif bağlantı bulunmayan/pasif danışan `403` döner. Trainer/Admin rolü yeterli değildir. Yanıt `no-store` içerir.
+
 ---
 
 ## 19.3 Beslenme Hedefi Oluştur
@@ -1464,7 +1473,7 @@ Request:
 
 Başarı: `201 Created`; yanıt oluşturulan `NutritionGoal` kaydını 19.1'deki alanlarla ve `isActive: true` değeriyle döner. V1'de yeni hedef doğrudan aktif oluşturulur; aynı kullanıcının önceki aktif `NutritionGoal` kaydı aynı veritabanı işleminde pasifleştirilir. Kullanıcı başına en fazla bir aktif hedef vardır. `startDate`/`endDate` geçerlilik aralığı dışında mobilde günlük hedef gösterilmez; eski hedef otomatik olarak yeniden etkinleşmez.
 
-Beş sayısal hedef ve `startDate` zorunludur. Hedefler 0–9999999999.99, en fazla iki ondalık basamaklı JSON number olmalıdır. Bu sınırlar DB hassasiyeti içindir, sağlık önerisi değildir. `endDate` opsiyonel olup başlangıçtan önce olamaz. Bağlı danışan geçmişi `200 NutritionGoalResponse[]`, aktif kayıt önce, sonra oluşturma zamanı azalan sırada döner; kayıt yoksa `[]`.
+Uygulanmıştır; DTO `CreateNutritionGoalRequest`. Beş sayısal alanın tamamı ve `startDate` zorunludur. Sayılar 0–9999999999.99 aralığında, en fazla iki ondalık basamaklıdır (PostgreSQL depolama sınırı, sağlık önerisi değil); negatif/eksik/fazla hassasiyetli değer `400` üretir. `endDate` nullable ve başlangıçtan önce olamaz. JWT'den alınan Dietitian kimliği request'le seçilemez; bilinmeyen alanlar reddedilir. İlişki kontrolü ve hedef değişimi aynı transaction/danışan kilidindedir. Eşzamanlı atamalarda tamamlanan iki kayıt geçmişte korunur, en son hedef aktiftir; validation/yetki hatasında eski hedef korunur. `Location` danışanın hedef listesidir. Yanıt `no-store` içerir.
 
 ---
 

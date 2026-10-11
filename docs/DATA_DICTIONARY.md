@@ -17,7 +17,7 @@ Bu dosya, `NAMING_CONVENTIONS.md` ile birlikte proje terminolojisinin ana refera
 
 ### Mobil atama okumaları: uygulanmış veri altyapısı
 
-`AddMobileAssignmentReads` migration'ı şu mevcut kavramları kalıcı hale getirir: `AdvisorProfile`, `UserAdvisor`, `AdvisorNote`, `UserTask`, `Exercise`, `WorkoutPlan`, `WorkoutDay`, `WorkoutExercise`, `NutritionGoal`. Bunların dışında yeni domain tablosu eklenmez; `Advisor`/`Trainer`/`Dietitian` için ayrı kullanıcı tablosu oluşturulmaz. `Exercise`, programdaki `ExerciseId` foreign key'i ve gerçek `exerciseName` için gereklidir; egzersiz yönetimi henüz uygulanmamıştır.
+`AddMobileAssignmentReads` migration'ı şu mevcut kavramları kalıcı hale getirir: `AdvisorProfile`, `UserAdvisor`, `AdvisorNote`, `UserTask`, `Exercise`, `WorkoutPlan`, `WorkoutDay`, `WorkoutExercise`, `NutritionGoal`. Bunların dışında yeni domain tablosu eklenmez; `Advisor`/`Trainer`/`Dietitian` için ayrı kullanıcı tablosu oluşturulmaz. `Exercise`, programdaki `ExerciseId` foreign key'i ve gerçek `exerciseName` için gereklidir; Admin katalog oluşturma/güncelleme API'leri mevcut tabloyu kullanır.
 
 - Kimlikler UUID; takvim alanları PostgreSQL `date` / C# `DateOnly`, oluşturma/güncelleme zamanları UTC `timestamptz` kullanır. Enumlar string saklanır ve JSON'da string döner.
 - User, danışman, Trainer ve Dietitian referansları `users` tablosuna foreign key ile bağlıdır; atama verileri varken kullanıcı silme `Restrict` davranışıyla korunur. Plan silinirse kendi gün/egzersiz satırları `Cascade`; egzersiz kataloğu referansı `Restrict` olur.

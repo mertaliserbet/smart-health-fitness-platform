@@ -7,28 +7,29 @@ namespace SmartHealthFitness.Api.Services;
 
 public sealed class NutritionService(AppDbContext dbContext, AdvisorService advisorService)
 {
-    public Task<NutritionGoalResponse[]> GetGoalsAsync(Guid userId, CancellationToken ct) =>
+    public Task<NutritionGoalResponse[]> GetNutritionGoalsAsync(Guid userId, CancellationToken cancellationToken) =>
         dbContext.NutritionGoals.AsNoTracking().Where(goal => goal.UserId == userId)
             .OrderByDescending(goal => goal.IsActive).ThenByDescending(goal => goal.CreatedAt).ThenBy(goal => goal.Id)
             .Select(goal => new NutritionGoalResponse(goal.Id, goal.DailyCalories, goal.ProteinGrams,
                 goal.CarbohydrateGrams, goal.FatGrams, goal.WaterMl, goal.IsActive, goal.StartDate, goal.EndDate))
-            .ToArrayAsync(ct);
+            .ToArrayAsync(cancellationToken);
 
-    public async Task<NutritionGoalResponse> CreateGoalAsync(Guid userId, Guid dietitianId,
-        CreateNutritionGoalRequest request, CancellationToken ct)
+    public async Task<NutritionGoalResponse> CreateNutritionGoalAsync(Guid userId, Guid dietitianId,
+        CreateNutritionGoalRequest request, CancellationToken cancellationToken)
     {
-        await using var transaction = await dbContext.Database.BeginTransactionAsync(ct);
-        await advisorService.LockClientAsync(userId, dietitianId, AdvisorType.Dietitian, ct);
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+        await advisorService.LockClientAsync(dietitianId, userId, AdvisorType.Dietitian, cancellationToken);
+        var now = DateTime.UtcNow;
         await dbContext.NutritionGoals.Where(goal => goal.UserId == userId && goal.IsActive)
             .ExecuteUpdateAsync(setters => setters.SetProperty(goal => goal.IsActive, false)
-                .SetProperty(goal => goal.UpdatedAt, DateTime.UtcNow), ct);
+                .SetProperty(goal => goal.UpdatedAt, (DateTime?)now), cancellationToken);
         var goal = new NutritionGoal { UserId = userId, DietitianId = dietitianId,
-            DailyCalories = request.DailyCalories, ProteinGrams = request.ProteinGrams,
-            CarbohydrateGrams = request.CarbohydrateGrams, FatGrams = request.FatGrams, WaterMl = request.WaterMl,
-            StartDate = request.StartDate, EndDate = request.EndDate };
+            DailyCalories = request.DailyCalories!.Value, ProteinGrams = request.ProteinGrams!.Value,
+            CarbohydrateGrams = request.CarbohydrateGrams!.Value, FatGrams = request.FatGrams!.Value,
+            WaterMl = request.WaterMl!.Value, StartDate = request.StartDate!.Value, EndDate = request.EndDate };
         dbContext.NutritionGoals.Add(goal);
-        await dbContext.SaveChangesAsync(ct);
-        await transaction.CommitAsync(ct);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
         return new(goal.Id, goal.DailyCalories, goal.ProteinGrams, goal.CarbohydrateGrams,
             goal.FatGrams, goal.WaterMl, goal.IsActive, goal.StartDate, goal.EndDate);
     }

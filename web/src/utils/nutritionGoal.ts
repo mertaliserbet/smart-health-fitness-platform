@@ -26,9 +26,10 @@ export function prepareNutritionGoal(draft: NutritionGoalDraft) {
     if (!draft[key].trim()) errors[key.toLowerCase()] = 'Bu alan gerekli.';
     else if (!Number.isFinite(request[key]) || request[key] < 0)
       errors[key.toLowerCase()] = 'Sıfır veya daha büyük bir sayı gir.';
-    else if (request[key] > 9999999999.99 || !/^\d+(\.\d{1,2})?$/.test(draft[key].trim()))
-      errors[key.toLowerCase()] =
-        'En fazla iki ondalık basamak ve 9999999999.99 üst sınırı kullan.';
+    else if (request[key] > 9999999999.99)
+      errors[key.toLowerCase()] = 'Değer izin verilen sayı sınırını aşıyor.';
+    else if (Number(request[key].toFixed(2)) !== request[key])
+      errors[key.toLowerCase()] = 'En fazla iki ondalık basamak gir.';
   }
   if (!isValidDate(draft.startDate)) errors.startdate = 'Geçerli bir başlangıç tarihi seç.';
   if (draft.endDate && !isValidDate(draft.endDate))

@@ -8,73 +8,80 @@ using SmartHealthFitness.Api.Services;
 namespace SmartHealthFitness.Api.Controllers;
 
 [ApiController]
-[Authorize(Roles = RoleNames.Trainer + "," + RoleNames.Dietitian)]
+[Authorize]
 [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
-public sealed class AdvisorClientsController(AdvisorService advisors, WorkoutService workouts,
-    NutritionService nutrition) : ControllerBase
+public sealed class AdvisorClientsController(AdvisorService advisorService, WorkoutService workoutService,
+    NutritionService nutritionService) : ControllerBase
 {
-    private Guid AdvisorId => Guid.Parse(User.FindFirst(JwtRegisteredClaimNames.Sub)!.Value);
+    private Guid CurrentUserId => Guid.Parse(User.FindFirst(JwtRegisteredClaimNames.Sub)!.Value);
 
-    [Authorize(Policy = RoleNames.Trainer), HttpGet("api/trainers/me/clients")]
-    public async Task<ActionResult<ClientSummaryResponse[]>> GetTrainerClients(CancellationToken ct) =>
-        Ok(await advisors.GetClientsAsync(AdvisorId, AdvisorType.Trainer, ct));
+    [HttpGet("api/trainers/me/clients"), Authorize(Policy = RoleNames.Trainer)]
+    public async Task<ActionResult<ClientSummaryResponse[]>> GetTrainerClientsAsync(CancellationToken cancellationToken) =>
+        Ok(await advisorService.GetClientsAsync(CurrentUserId, AdvisorType.Trainer, cancellationToken));
 
-    [Authorize(Policy = RoleNames.Dietitian), HttpGet("api/dietitians/me/clients")]
-    public async Task<ActionResult<ClientSummaryResponse[]>> GetDietitianClients(CancellationToken ct) =>
-        Ok(await advisors.GetClientsAsync(AdvisorId, AdvisorType.Dietitian, ct));
+    [HttpGet("api/dietitians/me/clients"), Authorize(Policy = RoleNames.Dietitian)]
+    public async Task<ActionResult<ClientSummaryResponse[]>> GetDietitianClientsAsync(CancellationToken cancellationToken) =>
+        Ok(await advisorService.GetClientsAsync(CurrentUserId, AdvisorType.Dietitian, cancellationToken));
 
-    [Authorize(Policy = RoleNames.Trainer), HttpGet("api/users/{userId:guid}/workout-plans")]
-    public async Task<ActionResult<WorkoutPlanSummaryResponse[]>> GetPlans(Guid userId, CancellationToken ct)
+    // Client management route; the auth-owned /users/me implementation is reused as-is.
+    [HttpGet("api/users/{userId:guid}"), Authorize(Roles = RoleNames.Trainer + "," + RoleNames.Dietitian + "," + RoleNames.Admin)]
+    public async Task<ActionResult<UserProfileResponse>> GetClientProfileAsync(Guid userId, CancellationToken cancellationToken) =>
+        Ok(await advisorService.GetClientProfileAsync(userId, CurrentUserId, User.IsInRole(RoleNames.Admin),
+            User.IsInRole(RoleNames.Trainer), User.IsInRole(RoleNames.Dietitian), cancellationToken));
+
+    [HttpGet("api/users/{userId:guid}/workout-plans"), Authorize(Policy = RoleNames.Trainer)]
+    public async Task<ActionResult<WorkoutPlanSummaryResponse[]>> GetClientWorkoutPlansAsync(Guid userId,
+        CancellationToken cancellationToken)
     {
-        await advisors.RequireClientAsync(userId, AdvisorId, AdvisorType.Trainer, ct);
-        return Ok(await workouts.GetWorkoutPlansAsync(userId, ct));
+        await advisorService.RequireClientAsync(CurrentUserId, userId, AdvisorType.Trainer, cancellationToken);
+        return Ok(await workoutService.GetWorkoutPlansAsync(userId, cancellationToken));
     }
 
-    [Authorize(Policy = RoleNames.Trainer), HttpPost("api/users/{userId:guid}/workout-plans")]
-    [ProducesResponseType<WorkoutPlanResponse>(StatusCodes.Status201Created)]
-    public async Task<ActionResult<WorkoutPlanResponse>> CreatePlan(Guid userId,
-        CreateWorkoutPlanRequest request, CancellationToken ct)
+    [HttpPost("api/users/{userId:guid}/workout-plans"), Authorize(Policy = RoleNames.Trainer)]
+    public async Task<ActionResult<WorkoutPlanResponse>> CreateWorkoutPlanAsync(Guid userId, CreateWorkoutPlanRequest request,
+        CancellationToken cancellationToken)
     {
-        var response = await workouts.CreatePlanAsync(userId, AdvisorId, request, ct);
-        return Created($"/api/workout-plans/{response.Id}", response);
+        var plan = await workoutService.CreatePlanAsync(userId, CurrentUserId, request, cancellationToken);
+        return Created($"/api/workout-plans/{plan.Id}", plan);
     }
 
-    [Authorize(Policy = RoleNames.Dietitian), HttpGet("api/users/{userId:guid}/nutrition-goals")]
-    public async Task<ActionResult<NutritionGoalResponse[]>> GetGoals(Guid userId, CancellationToken ct)
+    [HttpGet("api/users/{userId:guid}/nutrition-goals"), Authorize(Policy = RoleNames.Dietitian)]
+    public async Task<ActionResult<NutritionGoalResponse[]>> GetClientNutritionGoalsAsync(Guid userId,
+        CancellationToken cancellationToken)
     {
-        await advisors.RequireClientAsync(userId, AdvisorId, AdvisorType.Dietitian, ct);
-        return Ok(await nutrition.GetGoalsAsync(userId, ct));
+        await advisorService.RequireClientAsync(CurrentUserId, userId, AdvisorType.Dietitian, cancellationToken);
+        return Ok(await nutritionService.GetNutritionGoalsAsync(userId, cancellationToken));
     }
 
-    [Authorize(Policy = RoleNames.Dietitian), HttpPost("api/users/{userId:guid}/nutrition-goals")]
-    [ProducesResponseType<NutritionGoalResponse>(StatusCodes.Status201Created)]
-    public async Task<ActionResult<NutritionGoalResponse>> CreateGoal(Guid userId,
-        CreateNutritionGoalRequest request, CancellationToken ct) =>
-        StatusCode(201, await nutrition.CreateGoalAsync(userId, AdvisorId, request, ct));
-
-    [HttpGet("api/users/{userId:guid}/tasks")]
-    public async Task<ActionResult<UserTaskResponse[]>> GetTasks(Guid userId, CancellationToken ct)
+    [HttpPost("api/users/{userId:guid}/nutrition-goals"), Authorize(Policy = RoleNames.Dietitian)]
+    public async Task<ActionResult<NutritionGoalResponse>> CreateNutritionGoalAsync(Guid userId,
+        CreateNutritionGoalRequest request, CancellationToken cancellationToken)
     {
-        await advisors.RequireClientAsync(userId, AdvisorId, null, ct);
-        return Ok(await advisors.GetUserTasksAsync(userId, null, ct));
+        var goal = await nutritionService.CreateNutritionGoalAsync(userId, CurrentUserId, request, cancellationToken);
+        return Created($"/api/users/{userId}/nutrition-goals", goal);
     }
 
-    [HttpPost("api/users/{userId:guid}/tasks")]
-    [ProducesResponseType<UserTaskResponse>(StatusCodes.Status201Created)]
-    public async Task<ActionResult<UserTaskResponse>> CreateTask(Guid userId,
+    [HttpGet("api/users/{userId:guid}/tasks"), Authorize(Roles = RoleNames.Trainer + "," + RoleNames.Dietitian)]
+    public async Task<ActionResult<UserTaskResponse[]>> GetTasksAsync(Guid userId, CancellationToken ct)
+    {
+        await advisorService.RequireClientAsync(CurrentUserId, userId, null, ct);
+        return Ok(await advisorService.GetUserTasksAsync(userId, null, ct));
+    }
+
+    [HttpPost("api/users/{userId:guid}/tasks"), Authorize(Roles = RoleNames.Trainer + "," + RoleNames.Dietitian)]
+    public async Task<ActionResult<UserTaskResponse>> CreateTaskAsync(Guid userId,
         CreateUserTaskRequest request, CancellationToken ct) =>
-        StatusCode(201, await advisors.CreateTaskAsync(userId, AdvisorId, request, ct));
+        StatusCode(201, await advisorService.CreateTaskAsync(userId, CurrentUserId, request, ct));
 
-    [HttpGet("api/users/{userId:guid}/advisor-notes")]
-    public async Task<ActionResult<AdvisorNoteResponse[]>> GetNotes(Guid userId, CancellationToken ct)
+    [HttpGet("api/users/{userId:guid}/advisor-notes"), Authorize(Roles = RoleNames.Trainer + "," + RoleNames.Dietitian)]
+    public async Task<ActionResult<AdvisorNoteResponse[]>> GetNotesAsync(Guid userId, CancellationToken ct)
     {
-        await advisors.RequireClientAsync(userId, AdvisorId, null, ct);
-        return Ok(await advisors.GetAdvisorNotesAsync(userId, ct));
+        await advisorService.RequireClientAsync(CurrentUserId, userId, null, ct);
+        return Ok(await advisorService.GetAdvisorNotesAsync(userId, ct));
     }
 
-    [HttpPost("api/users/{userId:guid}/advisor-notes")]
-    [ProducesResponseType<AdvisorNoteResponse>(StatusCodes.Status201Created)]
-    public async Task<ActionResult<AdvisorNoteResponse>> CreateNote(Guid userId,
+    [HttpPost("api/users/{userId:guid}/advisor-notes"), Authorize(Roles = RoleNames.Trainer + "," + RoleNames.Dietitian)]
+    public async Task<ActionResult<AdvisorNoteResponse>> CreateNoteAsync(Guid userId,
         CreateAdvisorNoteRequest request, CancellationToken ct) =>
-        StatusCode(201, await advisors.CreateNoteAsync(userId, AdvisorId, request, ct));
+        StatusCode(201, await advisorService.CreateNoteAsync(userId, CurrentUserId, request, ct));
 }

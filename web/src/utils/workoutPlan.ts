@@ -68,6 +68,8 @@ export function prepareWorkoutPlan(draft: WorkoutPlanDraft): {
 } {
   const errors: Record<string, string> = {};
   if (!draft.name.trim()) errors.name = 'Program adı gerekli.';
+  else if (draft.name.trim().length > 200)
+    errors.name = 'Program adı en fazla 200 karakter olabilir.';
   if (!isValidDate(draft.startDate)) errors.startdate = 'Geçerli bir başlangıç tarihi seç.';
   if (draft.endDate && !isValidDate(draft.endDate))
     errors.enddate = 'Geçerli bir bitiş tarihi seç.';
@@ -93,6 +95,8 @@ export function prepareWorkoutPlan(draft: WorkoutPlanDraft): {
   const days = draft.days.map((day, dayIndex) => {
     const prefix = `days.${dayIndex}`;
     if (!day.name.trim()) errors[`${prefix}.name`] = 'Gün adı gerekli.';
+    else if (day.name.trim().length > 200)
+      errors[`${prefix}.name`] = 'Gün adı en fazla 200 karakter olabilir.';
     if (!weekdays.some(({ value }) => value === day.weekday) || seen.has(day.weekday))
       errors[`${prefix}.weekday`] = 'Haftanın her günü yalnız bir kez seçilebilir.';
     seen.add(day.weekday);
@@ -116,6 +120,13 @@ export function prepareWorkoutPlan(draft: WorkoutPlanDraft): {
           if (sets === null) errors[`${path}.sets`] = 'Set sayısı gerekli.';
           if (reps === null) errors[`${path}.reps`] = 'Tekrar sayısı gerekli.';
         } else if (durationSeconds === null) errors[`${path}.durationseconds`] = 'Süre gerekli.';
+        const weightKg = optionalNumber(exercise.weightKg, `${path}.weightkg`, false);
+        if (weightKg !== null && Number.isFinite(weightKg)) {
+          if (weightKg > 99999999.99)
+            errors[`${path}.weightkg`] = 'Değer izin verilen sayı sınırını aşıyor.';
+          else if (Number(weightKg.toFixed(2)) !== weightKg)
+            errors[`${path}.weightkg`] = 'En fazla iki ondalık basamak gir.';
+        }
         return {
           exerciseId: exercise.exerciseId,
           order: index + 1,
@@ -123,7 +134,7 @@ export function prepareWorkoutPlan(draft: WorkoutPlanDraft): {
           reps,
           durationSeconds,
           restSeconds: optionalNumber(exercise.restSeconds, `${path}.restseconds`, true, true),
-          weightKg: optionalNumber(exercise.weightKg, `${path}.weightkg`, false),
+          weightKg,
           notes: exercise.notes.trim() || null,
         };
       }),
