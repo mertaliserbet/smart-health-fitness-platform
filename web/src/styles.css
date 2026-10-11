@@ -1,3 +1,186 @@
+/* Admin advisor management */
+.advisor-management {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.8fr) minmax(0, 1.2fr);
+  gap: 24px;
+  align-items: start;
+}
+.advisor-panel {
+  padding: 24px;
+  min-width: 0;
+}
+.advisor-section-heading,
+.advisor-relation-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.advisor-section-heading {
+  margin-bottom: 24px;
+}
+.advisor-section-heading svg {
+  color: #8bb5ff;
+}
+.advisor-section-heading h2 {
+  flex: 1;
+}
+.advisor-editor {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.advisor-editor label:not(.advisor-candidate) {
+  display: block;
+  margin: 16px 0 8px;
+  font-size: 12px;
+  color: #c3cee0;
+}
+.advisor-list-title {
+  font-size: 14px;
+  padding: 0;
+  margin: 20px 0 12px;
+}
+.advisor-search-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.advisor-search-row input {
+  min-width: 0;
+}
+.advisor-candidates {
+  display: grid;
+  gap: 8px;
+  max-height: 360px;
+  overflow-y: auto;
+  padding: 4px;
+}
+.advisor-candidate {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+  background: #141e31;
+  cursor: pointer;
+}
+.advisor-candidate.selected {
+  border-color: var(--primary);
+  background: #162438;
+}
+.advisor-candidate.unavailable {
+  opacity: 0.65;
+  cursor: default;
+}
+.advisor-candidate input {
+  width: 18px;
+  flex: 0 0 18px;
+  accent-color: var(--primary);
+}
+.advisor-candidate span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.advisor-candidate strong {
+  font-size: 14px;
+}
+.advisor-candidate small {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.advisor-pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin: 16px 0;
+}
+.advisor-pagination span {
+  font-size: 12px;
+  color: var(--muted);
+}
+.advisor-help,
+.advisor-empty {
+  font-size: 12px;
+  line-height: 1.8;
+  margin-bottom: 16px;
+}
+.advisor-editor .form-failure {
+  margin-bottom: 16px;
+}
+.advisor-relations {
+  display: grid;
+  gap: 14px;
+}
+.advisor-relation {
+  background: #141e31;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+}
+.advisor-relation-heading h3 {
+  font-size: 16px;
+  overflow-wrap: anywhere;
+}
+.advisor-relation > .muted {
+  font-size: 12px;
+  margin-top: 9px;
+}
+.advisor-status {
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 5px 9px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.advisor-status.active {
+  color: #8cdeba;
+  border-color: #2f6853;
+  background: #15352f;
+}
+.advisor-dates {
+  margin: 14px 0;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.8;
+}
+.advisor-end-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.advisor-relation .assignment-warning {
+  margin: 18px 0;
+}
+.advisor-end-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.advisor-notice {
+  margin-bottom: 24px;
+}
+@media (max-width: 1150px) {
+  .advisor-management {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 600px) {
+  .advisor-panel {
+    padding: 18px;
+  }
+  .advisor-end-fields {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+}
+
 /* Nutrition screens */
 .nutrition-form {
   display: grid;

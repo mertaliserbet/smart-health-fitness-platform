@@ -46,6 +46,17 @@ export interface PagedResponse<T> {
   totalPages: number;
 }
 
+export type AdvisorType = 'Trainer' | 'Dietitian';
+export interface UserAdvisorManagementResponse {
+  userAdvisorId: string;
+  userId: string;
+  advisorId: string;
+  advisorType: AdvisorType;
+  status: 'Active' | 'Ended' | 'Cancelled';
+  startDate: string;
+  endDate: string | null;
+}
+
 export interface ProblemDetails {
   title?: string;
   detail?: string;
