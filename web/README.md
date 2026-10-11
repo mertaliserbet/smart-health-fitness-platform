@@ -27,7 +27,9 @@ Adres: http://localhost:5173. Port doluysa Vite başka port seçmez; backend COR
 - Çoklu web rolünde yalnız hesaba atanmış rollerden panel seçimi. `User` hesabı mobil uygulamaya yönlendiren açıklama görür.
 - Responsive koyu arayüz; klavye odağı, görünür alan etiketleri ve yükleniyor/boş/hata durumları.
 
-Program düzenleme, beslenme kayıtları/ilerleme, profil düzenleme, rol yönetimi ve egzersiz/ekipman yönetim formları henüz uygulanmadı. Tamamlanmamış işlemler için işlevsiz düğmeler gösterilmez.
+Trainer, danışan profilinden veya program listesinden **Antrenman geçmişi** ekranına ulaşır. Durum filtresi ve sayfalama gerçek API'yi kullanır; detayda hedefler, gerçekleşen set/tekrar/süre/ağırlık, notlar ve kaydı olmayan egzersizler gösterilir. Tamamlanmış oturum kısmi olabilir. Geçmiş yalnız aktif bağlı Trainer'a açıktır; demo modunda gerçek giriş açıklaması gösterilir. Oturum başlatılmış programın düzenleme bağlantısı kapanır; yeni program atanabilir.
+
+Beslenme kayıtları/ilerleme, profil düzenleme, rol yönetimi ve egzersiz/ekipman yönetim formları henüz uygulanmadı. Tamamlanmamış işlemler için işlevsiz düğmeler gösterilmez.
 
 ## Gerçek API bağlantısı
 
@@ -49,6 +51,8 @@ Varsayılan `/api` istekleri geliştirmede Vite proxy üzerinden `http://localho
 | Danışanın programları        | `GET /api/users/{userId}/workout-plans`                                  |
 | Program detayı               | `GET /api/workout-plans/{workoutPlanId}`                                 |
 | Aktif programı düzenleme     | `PUT /api/workout-plans/{workoutPlanId}`                                 |
+| Danışanın antrenman geçmişi  | `GET /api/users/{userId}/workout-sessions?page=1&pageSize=20&status=...` |
+| Antrenman oturumu detayı     | `GET /api/workout-sessions/{sessionId}`                                  |
 | Program oluşturma ve atama   | `POST /api/users/{userId}/workout-plans`                                 |
 | Danışanın beslenme hedefleri | `GET /api/users/{userId}/nutrition-goals`                                |
 | Beslenme hedefi atama        | `POST /api/users/{userId}/nutrition-goals`                               |

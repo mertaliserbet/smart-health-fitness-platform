@@ -261,11 +261,11 @@ try {
     Assert-Check ((Invoke-Api 'POST' '/api/auth/refresh' @{ refreshToken = $roleLogin.Body.refreshToken }).Status -eq 401) 'Inactive account refresh was accepted.'
     Assert-Check ((Invoke-Api 'GET' '/api/users/me' $null $roleLogin.Body.accessToken).Status -eq 401) 'Inactive account access was accepted.'
     $tables = Invoke-CheckSql "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name NOT LIKE '\_\_%' ORDER BY table_name;"
-    Assert-Check ($tables -eq "advisor_notes`nadvisor_profiles`nbody_measurements`nexercises`nnutrition_goals`nnutrition_records`nrefresh_tokens`nroles`nrunning_activities`nuser_advisors`nuser_roles`nuser_tasks`nusers`nweight_records`nworkout_days`nworkout_exercises`nworkout_plans") 'Migration created unexpected domain tables.'
+    Assert-Check ($tables -eq "advisor_notes`nadvisor_profiles`nbody_measurements`nexercises`nnutrition_goals`nnutrition_records`nrefresh_tokens`nroles`nrunning_activities`nuser_advisors`nuser_roles`nuser_tasks`nusers`nweight_records`nworkout_days`nworkout_exercises`nworkout_logs`nworkout_plans`nworkout_sessions") 'Migration created unexpected domain tables.'
     Assert-Check ((Invoke-Api 'GET' '/api/users/me/weight-records' $null $roleLogin.Body.accessToken).Status -eq 401) 'Inactive account tracking access was accepted.'
     Assert-Check ((Invoke-Api 'GET' '/api/users/me/advisors' $null $roleLogin.Body.accessToken).Status -eq 401) 'Inactive account assignment access was accepted.'
     Assert-Check ((Invoke-Api 'GET' '/api/users/me/running-activities' $null $roleLogin.Body.accessToken).Status -eq 401) 'Inactive account running access was accepted.'
-    Write-Output 'PASS: inactive accounts are blocked; only auth, tracking, running, manual nutrition and required assignment tables exist.'
+    Write-Output 'PASS: inactive accounts are blocked; only auth, tracking, running, manual nutrition, assignment and workout session/log tables exist.'
     docker compose -f $composeFile -p $testName stop postgres
     if ($LASTEXITCODE -ne 0) { throw 'Temporary PostgreSQL could not be stopped for health check.' }
     foreach ($healthToken in @('', $secondLogin.Body.accessToken)) {

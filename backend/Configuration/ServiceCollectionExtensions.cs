@@ -31,6 +31,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<SmartHealthFitness.Api.Services.RunningService>();
         services.AddScoped<SmartHealthFitness.Api.Services.AdvisorService>();
         services.AddScoped<SmartHealthFitness.Api.Services.WorkoutService>();
+        services.AddScoped<SmartHealthFitness.Api.Services.WorkoutSessionService>();
         services.AddScoped<SmartHealthFitness.Api.Services.NutritionService>();
         services.AddScoped<SmartHealthFitness.Api.Services.ExerciseService>();
 

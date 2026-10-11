@@ -42,6 +42,7 @@ export interface WorkoutPlanSummaryResponse {
 
 export interface WorkoutPlanResponse extends WorkoutPlanSummaryResponse {
   updatedAt: string | null;
+  hasSessions?: boolean;
   userId: string;
   trainerId: string;
   description: string | null;

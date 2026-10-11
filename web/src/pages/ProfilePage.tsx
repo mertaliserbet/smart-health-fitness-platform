@@ -61,6 +61,9 @@ export function ProfilePage() {
             <Link className="button primary" to={`/programlar/${userId}`}>
               Antrenman programları
             </Link>
+            <Link className="button secondary" to={`/danisanlar/${userId}/antrenmanlar`}>
+              Antrenman geçmişi
+            </Link>
           </div>
         )}
         {userId && role === 'Dietitian' && data && !loading && !error && (

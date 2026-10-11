@@ -16,6 +16,10 @@ export function WorkoutPlanEdit() {
       const plan = await getWorkoutPlan(workoutPlanId, demo, signal);
       if (plan.userId !== client.id) throw new Error('Bu program seçili danışana ait değil.');
       if (!plan.isActive) throw new Error('Geçmiş program düzenlenemez. Yeni bir program ata.');
+      if (plan.hasSessions)
+        throw new Error(
+          'Bu programla antrenman başlatılmış. Geçmişi korumak için yeni bir program ata.',
+        );
       if (plan.trainerId !== user?.id)
         throw new Error('Yalnızca oluşturduğun programı düzenleyebilirsin.');
       if (
@@ -48,6 +52,11 @@ export function WorkoutPlanEdit() {
       {loading || error ? (
         <section className="panel">
           <PageState loading={loading} error={error} retry={retry} />
+          {error && (
+            <Link className="button secondary" to={`/programlar/${userId}/yeni`}>
+              Yeni program ata
+            </Link>
+          )}
         </section>
       ) : (
         data && (
