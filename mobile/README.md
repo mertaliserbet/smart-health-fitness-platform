@@ -90,7 +90,9 @@ lib/
     tracking/
       tracking_models.dart      WeightRecord/BodyMeasurement ve gösterim biçimi
       tracking_service.dart     Kimliği doğrulanmış listeleme/ekleme istekleri
-      tracking_screen.dart      Güncel kilo, geçmişler ve yükleme/hata durumu
+      tracking_screen.dart      Takip/Gelişim kartları ve bağımsız API durumları
+      tracking_progress.dart    Yerel dönem filtresi ve gerçek kayıt özetleri
+      tracking_widgets.dart     Ortak kartlar ve tarih eksenli gelişim grafiği
       tracking_entry_screen.dart Kilo/ölçüm formu ve kayıt zamanı seçimi
 test/                           Birim ve widget testleri
 integration_test/               Android üzerinde gerçek backend auth testi
@@ -128,6 +130,23 @@ Shell içindeki `IndexedStack` sekme içeriklerini ve kaydırma konumlarını ko
 - Alan doğrulaması ve API `ProblemDetails.errors` ilgili inputlarda gösterilir. Bilinen auth hataları Türkçedir; tanınmayan backend alan hatası backend mesajını korur.
 
 ## Kontroller
+
+### Takip / Gelişim
+
+- **7 gün / 30 gün / Tüm zamanlar** kilo, ölçüm geçmişi ve koşu özetini filtreler. 30 gün başlangıç görünümüdür; bugün dahil cihazın yerel takvim günleri kullanılır. Filtre mevcut API kayıtlarını cihazda süzer, yeni backend endpointi yoktur.
+- Güncel kilo tüm geçmişteki son kayıttır. Grafikte seçili dönemin tarihli değerleri ve ilk/son değer farkı gösterilir. Aynı zamana birden fazla kayıt varsa grafik API sırasındaki son kaydı kullanır; geçmiş tüm kayıtları korur. Kayıtsız günlere sıfır/tahmin eklenmez; farklı zamanda iki kayıt yoksa grafik yerine açıklama görünür. Noktaya dokununca tarih ve değer okunur.
+- Vücut ölçüm türü seçilir; eksik (`null`) alanlar grafiğe alınmaz. Çevre ölçümleri `cm`, yağ oranı `%`, yağ oranındaki değişim **yüzde puan** ile gösterilir. Değişim sağlık değerlendirmesi olarak yorumlanmaz.
+- Günlük kalori/makro kartı **bugünün** gerçek tüketimini API'nin o gün için döndürdüğü aktif hedefle karşılaştırır. Dönem filtresinden bağımsızdır. **Beslenme** üzerinden başka gün seçilebilir, öğün eklenebilir ve geçmiş açılabilir. Hedef yoksa tüketim gösterilir; sıfır hedef için yüzde hesaplanmaz.
+- Koşu özetinde seçili dönemde başlayan kayıtların toplam mesafesi (`km`), sayısı ve toplam aktif süresi gösterilir. Duraklama süresi eklenmez; GPS rotası yalnız mevcut koşu detay ekranında yüklenir.
+- Her kaynak ayrı yüklenir/hata gösterir ve **Tekrar dene** ile yenilenir. Aşağı çekerek tüm kartlar yenilenir. Yenileme hatasında son başarılı veri açık bir uyarıyla korunur. Kayıt ekleme veya beslenme/koşu ekranından dönüş ilgili özeti yeniler.
+
+Android emülatörü ve Docker Desktop açıkken repository kökünde:
+
+```powershell
+./mobile/tool/auth_smoke.ps1 -TrackingProgressTest
+```
+
+Bu test ayrı geçici PostgreSQL kullanır. Test hesapları ve aktif hedef hazırlanır; kilo, ölçüm, öğün ve koşu fixture kayıtları mevcut HTTP API'lerine gönderilir. Android'de grafikler, dönemler, makro/hedef karşılaştırması, koşu toplamları ve ikinci kullanıcının boş görünümü kontrol edilir. Koşu fixture koordinatları yalnız test girdisidir; uygulamada sahte rota veya veri yoktur. Test sonunda veritabanı kayıt adetleri doğrulanır ve geçici servisler kapatılır; kişisel veritabanı değişmez.
 
 ### Takip > Koşu (V1)
 
