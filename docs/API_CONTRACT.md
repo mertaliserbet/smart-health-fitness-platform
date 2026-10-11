@@ -1284,7 +1284,7 @@ Liste: `200 OK`, JSON array; boşsa `[]`. `recordedAt`, ardından sunucudaki `cr
 
 Ekleme: `CreateWeightRecordRequest`. `weightKg` zorunlu JSON number, 0.01–1000 kg ve en fazla iki ondalık basamak; `recordedAt` zorunlu ISO 8601 tarih/saat, gelecekte olamaz. İstemci UTC `Z` gönderir; açık offset gönderilirse UTC'ye dönüştürülür. Başarı: `201 Created`, gövde `WeightRecordResponse`, `Location: /api/users/me/weight-records` (liste adresi). Kayıt zamanı geçmişte olabilir; kayıt oluşturulma zamanı sunucuya aittir. Sınırlar teknik doğrulama içindir, sağlık önerisi değildir.
 
-17.3 danışman okuma akışı bu özelliğin kapsamı dışındadır; henüz uygulanmamıştır.
+17.3 danışman okuma akışı da uygulanmıştır; mevcut `TrackingService` ve `WeightRecordResponse` yeniden kullanılır. Danışman erişimi Client Management katmanında doğrulanır; kullanıcı kayıt/oluşturma API'leri ve veritabanı şeması değişmez.
 
 ## 17.1 Kendi Kilo Kayıtlarını Getir
 
@@ -1325,6 +1325,10 @@ Request:
 
 ## 17.3 Danışanın Kilo Geçmişini Gör
 
+Uygulanmıştır. Bearer JWT + `Trainer` veya `Dietitian` rolü ve token sahibine ait doğru türde aktif `UserAdvisor` ilişkisi zorunludur. Tek rol, o ilişki türüyle eşleşmelidir; iki danışman rolünü taşıyan token aktif türlerden birini kullanabilir. Danışan hesabı aktif ve `User`, danışman hesabı aktif ve ilişkinin rolünü halen taşıyor olmalıdır. Sadece User/Admin rolü `403`, token yok/geçersiz veya kendi hesabı pasifse `401`; atanmamış/bitmiş/iptal ilişki, pasif/rolü kaldırılmış veya bulunmayan danışan `403` döner. Query'de `advisorId`/`userId` göndermek bu kontrolü veya route'taki danışanı değiştirmez.
+
+`200 WeightRecordResponse[]`, boşsa `[]`; DTO ve sıralama 17.1 ile aynıdır. `Cache-Control: no-store`. V1 danışman listesinde de pagination/API tarih filtresi yoktur; web dönem seçimini mevcut kayıtlar üzerinde yerel uygular. Danışman adına kayıt ekleme/güncelleme/silme route'u bulunmaz. `POST /api/users/me/weight-records` yalnız kendi User kaydını oluşturmaya devam eder.
+
 ```http
 GET /api/users/{userId}/weight-records
 ```
@@ -1340,7 +1344,7 @@ Assigned Dietitian
 
 # 18. BODY MEASUREMENT ENDPOINTLERİ
 
-18.1 ve 18.2 uygulanmıştır. Yetki/sahiplik/hata/cache ve sıralama kuralları bölüm 17 ile aynıdır. 18.3 danışman okuma akışı henüz uygulanmamıştır.
+18.1, 18.2 ve 18.3 uygulanmıştır. Kendi kayıtları için yetki/sahiplik/hata/cache ve sıralama kuralları bölüm 17 ile aynıdır. Danışman okumaları 17.3'ün aktif ilişki ve role uygun erişim kurallarını kullanır.
 
 Liste: `200 OK`, `BodyMeasurementResponse[]`; boşsa `[]`. DTO: `id`, nullable `chestCm`, `waistCm`, `hipCm`, `armCm`, `thighCm`, `bodyFatPercentage` ve `recordedAt`. Yanıtta alanlar atlanmaz; verilmemiş ölçümler `null` döner.
 
@@ -1392,6 +1396,8 @@ Request:
 ---
 
 ## 18.3 Danışanın Ölçümlerini Gör
+
+Uygulanmıştır. 17.3 ile aynı erişim/hata/cache kuralları. `200 BodyMeasurementResponse[]`, boşsa `[]`; 18.1'deki nullable alanlar ve sıralama korunur. Eksik ölçümler sıfıra dönüştürülmez. Web grafiğinde boş alanlar çizgiyi keser; son ölçüm özeti seçilen alanın son dolu değerinin kendi tarihini gösterir. Yeni DTO, tablo, migration veya danışman yazma API'si eklenmez; mevcut TrackingService okunur.
 
 ```http
 GET /api/users/{userId}/body-measurements

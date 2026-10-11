@@ -201,6 +201,8 @@ Tüm yanıtlar `no-store` kullanır. Kullanıcı kimliği JWT `sub` claim'inden 
 | `GET /api/trainers/me/clients` | `200` aktif danışan listesi | Trainer |
 | `GET /api/dietitians/me/clients` | `200` aktif danışan listesi | Dietitian |
 | `GET /api/users/{userId}` | `200` profil | Atanmış Trainer/Dietitian veya Admin |
+| `GET /api/users/{userId}/weight-records` | `200` kilo geçmişi, yoksa `[]` | Aktif atanmış Trainer/Dietitian |
+| `GET /api/users/{userId}/body-measurements` | `200` vücut ölçüm geçmişi, yoksa `[]` | Aktif atanmış Trainer/Dietitian |
 | `GET /api/users?page=1&pageSize=20` | `200` sayfalı kullanıcı özeti | Admin |
 | `GET /api/user-advisors?userId={userId}` | `200` ilişki geçmişi | Admin |
 | `POST /api/user-advisors` | `201` oluşturulan ilişki | Admin |
@@ -218,6 +220,10 @@ Tüm yanıtlar `no-store` kullanır. Kullanıcı kimliği JWT `sub` claim'inden 
 Bu endpointler mevcut `AddMobileAssignmentReads` tablolarını kullanır; ek migration gerekmez. Yeni program veya hedef ataması, önceki aktif kaydı aynı transaction içinde pasifleştirir ve geçmişi korur. Danışan satırı kilidi eşzamanlı atamaları ve Admin ilişki sonlandırmasını sıralar. Atama kimliği request'ten seçilemez; Trainer/Dietitian JWT'den alınır. Geçersiz gün/egzersiz sırası, eksik hedefler, pasif egzersiz, tarih aralığı ve sayı hassasiyeti `400` alan hatası verir. Aktif bağlantısı olmayan danışan veya uygun olmayan rol `403`, bulunamayan kayıt `404`, yinelenen aktif danışman ilişkisi `409` döner. Yanıtlar `no-store` kullanır.
 
 Admin kullanıcı özeti kişisel sağlık alanlarını içermez; Admin'in profil okumasında doğum tarihi, cinsiyet ve boy yalnız aynı hesaba ayrıca aktif danışman ilişkisi varsa döner. Admin ilişki yönetimi `UserAdvisorManagementResponse`, mobil rehber okuması mevcut `UserAdvisorResponse` kullanır. Ayrıntılı request/response sözleşmeleri `docs/API_CONTRACT.md` içindedir.
+
+Danışan kilo/vücut geçmişi, mevcut `TrackingService`, `WeightRecordResponse` ve `BodyMeasurementResponse` ile okunur; yeni tablo/migration eklenmez. Aktif `UserAdvisor` ilişkisi, danışanın aktif `User` hesabı ve danışmanın güncel uygun rolü kontrol edilir. Tek danışman rolü içeren token ilişki türüyle eşleşmelidir; iki rol içeren token uygun aktif ilişkilerden birini kullanabilir. Admin/User tek başına yetkili değildir; bulunamayan veya bağlantısız danışan `403` verir. Kayıtlar mevcut mobil API sırasını ve null/sıfır değerleri korur. Yanıtlar `no-store`; sunucu dönem filtresi/sayfalama yoktur. Danışman rotalarında yazma metodu bulunmaz; danışan kendi kayıtlarını mevcut `/api/users/me/...` API'leriyle yönetir.
+
+`ClientProgressChecks.ps1`, aynı geçici fixture'da Trainer/Dietitian okumalarını mobil DTO'larıyla karşılaştırır. Boş/kısmi kayıtlar, sıfır değer, query ile sahiplik değiştirme, salt okunur rotalar, token/ilişki rolü, kaldırılan rol, pasif danışan ve sonlanan/iptal edilen ilişki kontrollerini kapsar.
 
 Trainer/Dietitian/Admin hesabı otomatik oluşturulmaz. Public register yalnız `User` üretir; ilk yetkili hesabın rolü güvenilir geliştirme/dağıtım kurulumu sırasında verilmelidir. Rol yönetimi endpointi ve program düzenleme hâlâ beklemektedir. Web'deki mevcut danışan, program, beslenme ve görev/not atama ekranları gerçek API ile çalışır. Admin, kullanıcı profilindeki Danışmanları yönet ekranından ilişki oluşturabilir, sonlandırabilir ve geçmişi görebilir; katalog yazma işlemleri şimdilik API/Swagger üzerinden yapılır. User kendi bekleyen/devam eden görevini tamamlayabilir; aynı tamamlamanın tekrarı tarihi değiştirmez, bitmiş görev yeniden açılamaz.
 

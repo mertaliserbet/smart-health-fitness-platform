@@ -224,3 +224,5 @@ foreach ($relationEntry in @(@{ Id = $trainerRelation.userAdvisorId; Staff = $tr
 Assert-Check ((Invoke-Api 'GET' '/api/users/me/advisors' $null $clientUser.Token).Body.Count -eq 0) 'Ended advisors visible to mobile.'
 Assert-Check ((Invoke-Api 'GET' '/api/users/me/workout-plans' $null $clientUser.Token).Body.Count -eq 3) 'Relationship termination erased user history.'
 Write-Output 'PASS: real advisor management, client/profile access, catalog, web-to-mobile plan/goal assignment, validation, concurrent replacements and relationship termination.'
+
+. (Join-Path $PSScriptRoot 'ClientProgressChecks.ps1')

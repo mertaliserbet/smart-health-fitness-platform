@@ -28,6 +28,8 @@ Adres: http://localhost:5173. Port doluysa Vite başka port seçmez; backend COR
 - Çoklu web rolünde yalnız hesaba atanmış rollerden panel seçimi. `User` hesabı mobil uygulamaya yönlendiren açıklama görür.
 - Responsive koyu arayüz; klavye odağı, görünür alan etiketleri ve yükleniyor/boş/hata durumları.
 
+Trainer ve Dietitian için **Danışanlar → profil → Kilo / Vücut ilerlemesi**: mevcut kilo ve vücut ölçüm kayıtları, dönem seçimi, zaman eksenli grafikler, son ölçüm/değişim özeti ve sayfalı kayıt tablosu.
+
 Program düzenleme, beslenme kayıtları/ilerleme, profil düzenleme, rol yönetimi ve ekipman yönetim formu henüz uygulanmadı. Tamamlanmamış işlemler için işlevsiz düğmeler gösterilmez.
 
 ## Gerçek API bağlantısı
@@ -36,28 +38,31 @@ Varsayılan `/api` istekleri geliştirmede Vite proxy üzerinden `http://localho
 
 İstekler `docs/API_CONTRACT.md` sözleşmesini kullanır. Admin katalog listesi için mevcut route'a `includeInactive=true` seçeneği eklenmiştir; Trainer/mobil varsayılan liste yanıtı korunur. Kullanılan istekler:
 
-| İşlem                        | Endpoint                                                                 |
-| ---------------------------- | ------------------------------------------------------------------------ |
-| Giriş, yenileme, çıkış       | `POST /api/auth/login`, `/refresh`, `/logout`                            |
-| Profil                       | `GET /api/users/me`, `GET /api/users/{userId}`                           |
-| Antrenörün danışanları       | `GET /api/trainers/me/clients`                                           |
-| Diyetisyenin danışanları     | `GET /api/dietitians/me/clients`                                         |
-| Yönetici kullanıcı listesi   | `GET /api/users?page=...&pageSize=20`                                    |
-| Danışman adaylarını bulma    | `GET /api/users?page=...&pageSize=20&role=Trainer\|Dietitian&search=...` |
-| Danışman ilişkileri ve atama | `GET /api/user-advisors?userId=...`, `POST /api/user-advisors`           |
-| İlişkiyi sonlandırma         | `PATCH /api/user-advisors/{userAdvisorId}`                               |
-| Egzersiz kataloğu            | `GET /api/exercises`                                                     |
-| Admin egzersiz kataloğu      | `GET /api/exercises?includeInactive=true`                                |
-| Egzersiz detayı / güncelleme | `GET/PUT /api/exercises/{exerciseId}`                                    |
-| Egzersiz oluşturma           | `POST /api/exercises`                                                    |
-| Danışanın programları        | `GET /api/users/{userId}/workout-plans`                                  |
-| Program detayı               | `GET /api/workout-plans/{workoutPlanId}`                                 |
-| Program oluşturma ve atama   | `POST /api/users/{userId}/workout-plans`                                 |
-| Danışanın beslenme hedefleri | `GET /api/users/{userId}/nutrition-goals`                                |
-| Beslenme hedefi atama        | `POST /api/users/{userId}/nutrition-goals`                               |
-| Görev/not listesi ve atama   | `GET/POST /api/users/{userId}/tasks`, `/advisor-notes`                   |
+| İşlem                         | Endpoint                                                                 |
+| ----------------------------- | ------------------------------------------------------------------------ |
+| Giriş, yenileme, çıkış        | `POST /api/auth/login`, `/refresh`, `/logout`                            |
+| Profil                        | `GET /api/users/me`, `GET /api/users/{userId}`                           |
+| Danışan kilo/vücut ilerlemesi | `GET /api/users/{userId}/weight-records`, `/body-measurements`           |
+| Antrenörün danışanları        | `GET /api/trainers/me/clients`                                           |
+| Diyetisyenin danışanları      | `GET /api/dietitians/me/clients`                                         |
+| Yönetici kullanıcı listesi    | `GET /api/users?page=...&pageSize=20`                                    |
+| Danışman adaylarını bulma     | `GET /api/users?page=...&pageSize=20&role=Trainer\|Dietitian&search=...` |
+| Danışman ilişkileri ve atama  | `GET /api/user-advisors?userId=...`, `POST /api/user-advisors`           |
+| İlişkiyi sonlandırma          | `PATCH /api/user-advisors/{userAdvisorId}`                               |
+| Egzersiz kataloğu             | `GET /api/exercises`                                                     |
+| Admin egzersiz kataloğu       | `GET /api/exercises?includeInactive=true`                                |
+| Egzersiz detayı / güncelleme  | `GET/PUT /api/exercises/{exerciseId}`                                    |
+| Egzersiz oluşturma            | `POST /api/exercises`                                                    |
+| Danışanın programları         | `GET /api/users/{userId}/workout-plans`                                  |
+| Program detayı                | `GET /api/workout-plans/{workoutPlanId}`                                 |
+| Program oluşturma ve atama    | `POST /api/users/{userId}/workout-plans`                                 |
+| Danışanın beslenme hedefleri  | `GET /api/users/{userId}/nutrition-goals`                                |
+| Beslenme hedefi atama         | `POST /api/users/{userId}/nutrition-goals`                               |
+| Görev/not listesi ve atama    | `GET/POST /api/users/{userId}/tasks`, `/advisor-notes`                   |
 
 Refresh token `sessionStorage` içinde sekme oturumu boyunca saklanır; access token yalnız bellektedir. Sayfa yenilenince refresh ve ardından `/api/users/me` ile oturum doğrulanır. Eşzamanlı `401` cevapları tek refresh isteğini paylaşır. Başarısız yenileme veya tekrar `401` oturumu kapatır. `403` için refresh denenmez. Sunucu çıkışı başarısız olsa bile yerel oturum temizlenir ve kullanıcıya açıklanır.
+
+Kilo/vücut ilerlemesi gerçek danışman hesabıyla kullanılır. Son 30/90 gün, son 1 yıl veya tüm geçmiş seçimi bugün dahil tarayıcının yerel takvim günlerini kapsar; API tüm geçmişi döner, dönem seçimi ve 20 satırlık tablo sayfaları web'de uygulanır. Grafikte kg/cm/% birimleri ve kayıt tarihleri gösterilir. Değişim seçili dönemdeki ilk ve son dolu alanı karşılaştırır; tek ölçümde değişim hesaplanmaz. Kısmi ölçümler “—” olarak kalır ve grafikte çizgiyi keser; sıfır yağ yüzdesi geçerli veridir. Son alan ölçümünün zamanı, başka alanları içeren daha yeni bir kaydın zamanı ile değiştirilmez. Ekran kayıt eklemez veya düzenlemez. Admin erişemez; aktif danışman ilişkisi ve güncel roller API tarafından tekrar doğrulanır. Gerçek API hatasında örnek veri gösterilmez.
 
 Tablodaki endpointler backend'de uygulanmıştır. Danışan listesi yalnız aktif ilişkileri içerir; başka kullanıcının profilini yalnız atanmış danışman veya Admin okuyabilir. Admin temel hesap alanlarını görür; kişisel sağlık alanları ayrıca aktif danışman ilişkisi gerektirir. Web'deki menü/route denetimlerine ek olarak JWT, rol ve aktif `UserAdvisor` denetimi backend tarafından uygulanır. Public register yalnız User hesabı üretir; danışman/Admin rolleri güvenilir kurulum sırasında verilir. Admin ilişki atama/sonlandırma ve egzersiz oluşturma/güncelleme web formları hazırdır. Egzersiz oluşturma/güncelleme ve pasif kayıtların katalogda listelenmesi Admin rolü gerektirir; Trainer kataloğu salt okunurdur.
 
@@ -106,6 +111,8 @@ Program testleri; sözleşmeye uygun POST ve gövdesiz 201, geçersiz tarih/say�
 Opt-in web/API/PostgreSQL/Android kontrolü: Docker Desktop ve emülatör açıkken repository kökünde `pwsh -File mobile/tool/auth_smoke.ps1 -AssignmentWriteTest`. Test yalnız geçici veritabanına bağlanır; `AssignmentLive.test.tsx` gerçek React formlarını JSDOM içinde, taklit edilmemiş HTTP ile kullanır. Sonra Android Planım ekranı atamaları okur ve görevi tamamlar. Bu opt-in test normal `npm test` içinde atlanır. Test API portu `5064` kullanılır; `5060/5061` web fetch tarafından engellendiğinden web testi için kullanılmaz.
 
 Beslenme testleri; sözleşmeye uygun POST ve JSON yanıtı, hedef listesinin tekrar yüklenmesi, sıfır/ondalık değerler, geçersiz sayı/tarih ve sayı hassasiyeti, API alan hataları, sonlanan ilişkide atamanın engellenmesi, rol sınırları, yinelenen gönderim, hata sonrası tekrar deneme, hedef geçerlilik sınırları ve örnek hedeflerin tek aktif hedef davranışını doğrular. Gerçek API/PostgreSQL kontrolleri repository kökünden `./backend/tests/AuthSmoke.ps1` ile çalıştırılır; ayrıntılar backend README'sindedir.
+
+İlerleme testleri; Trainer/Dietitian profil geçişi, rol/aktif danışan sınırları, API hatasında tekrar deneme, yanıt doğrulama, yerel dönem sınırları, eşzamanlı kayıt sırası, kısmi/sıfır ölçümler, grafik boşlukları ve tablo sayfalarını kapsar. Backend'in geçici PostgreSQL testi mevcut mobil DTO'ları ve salt okunur danışman erişimini karşılaştırır.
 
 ## Kaynak düzeni
 
