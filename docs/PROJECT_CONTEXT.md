@@ -446,6 +446,8 @@ AI yalnızca ekipmanı tanır. Egzersiz eşleştirmesi backend/veritabanı taraf
 - Tahmini kalori
 - Koşu geçmişi
 
+Mevcut V1 koşu uygulaması: Takip > Koşu üzerinden gerçek GPS ile başlat/duraklat/devam/bitir, aktif süre, mesafe, ortalama pace/hız, rota çizimi ve kişisel geçmiş/detay. Takip ön planda çalışır; arka planda otomatik duraklar. Duraklama süre/mesafeye eklenmez. Tamamlanan kayıt API üzerinden PostgreSQL'e gönderilir; ağ hatasında güvenli cihaz deposundan aynı ID ile yeniden denenir. Anlık hız, kalori tahmini ve arka plan konum servisi bu ilk uygulamada yoktur. Ayrıntılı veri ve API kuralları ilgili dokümanların RunningActivity bölümlerindedir.
+
 ## 8.5 Rehberim
 
 ```text

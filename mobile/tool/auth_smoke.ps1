@@ -4,7 +4,8 @@ param(
     [ValidateRange(1024, 65535)] [int] $DatabasePort = 55433,
     [switch] $AssignmentTest,
     [switch] $AssignmentWriteTest,
-    [switch] $NutritionTest
+    [switch] $NutritionTest,
+    [switch] $RunningTest
 )
 
 $ErrorActionPreference = 'Stop'
@@ -16,6 +17,7 @@ $composeFile = Join-Path $repositoryRoot 'backend/docker-compose.yml'
 $fixtureName = 'shf-mobile-auth-' + [Guid]::NewGuid().ToString('N').Substring(0, 12)
 $logDirectory = Join-Path ([IO.Path]::GetTempPath()) $fixtureName
 $apiProcess = $null
+$gpsProcess = $null
 $databaseStarted = $false
 $originalEnvironment = @{}
 foreach ($name in @('POSTGRES_PASSWORD', 'POSTGRES_USER', 'POSTGRES_DB', 'POSTGRES_PORT',
@@ -66,7 +68,24 @@ try {
     }
     if (-not $ready) { throw 'Test API health check failed.' }
 
-    if ($NutritionTest) {
+    if ($RunningTest) {
+        if ($Device -notmatch '^emulator-\d+$') { throw 'Running GPS fixture requires an Android emulator.' }
+        $adbPath = Join-Path $env:LOCALAPPDATA 'Android/Sdk/platform-tools/adb.exe'
+        if (-not (Test-Path -LiteralPath $adbPath)) { throw 'Android SDK adb was not found.' }
+        $gpsScript = Join-Path $PSScriptRoot 'running_gps_fixture.ps1'
+        $gpsProcess = Start-Process -FilePath (Get-Process -Id $PID).Path -WindowStyle Hidden -PassThru `
+            -ArgumentList @('-NoProfile', '-File', ('"' + $gpsScript + '"'), '-AdbPath', ('"' + $adbPath + '"'), '-Device', $Device) `
+            -RedirectStandardOutput (Join-Path $logDirectory 'gps.stdout.log') -RedirectStandardError (Join-Path $logDirectory 'gps.stderr.log')
+        Set-Location (Join-Path $repositoryRoot 'mobile')
+        flutter test integration_test/running_flow_test.dart -d $Device `
+            "--dart-define=API_BASE_URL=http://10.0.2.2:$ApiPort" --dart-define=RUNNING_TEST_FIXTURE=true
+        if ($LASTEXITCODE -ne 0) { throw 'Android running GPS integration test failed.' }
+        $stored = & docker compose -f $composeFile -p $fixtureName exec -T postgres psql -U mobile_auth_check -d mobile_auth_check -At -c `
+            "SELECT count(*) FROM running_activities WHERE distance_meters>0 AND duration_seconds>0 AND jsonb_array_length(route_data->'segments')=2;"
+        if ($LASTEXITCODE -ne 0 -or ($stored -join '').Trim() -ne '1') { throw 'Android GPS run was not persisted in PostgreSQL.' }
+        Write-Output 'PASS: native Android GPS start/pause/resume/finish -> PostgreSQL -> own history/detail, retry and user isolation.'
+    }
+    elseif ($NutritionTest) {
         # The user creates every NutritionRecord through Flutter; only advisor prerequisites are seeded.
         $nutritionIds = @{}
         foreach ($account in @('user', 'other', 'dietitian')) {
@@ -156,6 +175,10 @@ try {
 }
 finally {
     Set-Location $repositoryRoot
+    if ($null -ne $gpsProcess -and -not $gpsProcess.HasExited) {
+        Stop-Process -Id $gpsProcess.Id -ErrorAction SilentlyContinue
+        [void] $gpsProcess.WaitForExit(5000)
+    }
     if ($null -ne $apiProcess -and -not $apiProcess.HasExited) {
         Stop-Process -Id $apiProcess.Id -ErrorAction SilentlyContinue
         $apiProcess.WaitForExit()

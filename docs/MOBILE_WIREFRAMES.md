@@ -61,8 +61,8 @@ Fotoğraf Flutter'dan ASP.NET Core API'ye gider; FastAPI ile yalnızca backend k
 | M25 Beslenme geçmişi / günlük durum | Günün öğünlerini ve kalori/makroyu gösterir; geri + “Beslenme”. | Tarih seçici → geçerli hedef varsa kalori halkası/makro göstergeleri → öğün kartları → öğün ekleme seçenekleri. | **Öğün Ekle**; **Yemek Tara** / tarih değiştir. | B: öğün yok; hedef yoksa yalnız tüketim göster; Y: günlük kart iskeleti; H: kayıt ve hedef için ayrı tekrar dene. | M26, M16, M11, M20. |
 | M26 Manuel öğün ekle | `NutritionRecord` oluşturur; geri + “Öğün Ekle”. | Öğün türü → ad → porsiyon → kalori → protein/karbonhidrat/yağ → tüketim zamanı → CTA. | **Kaydet**; vazgeç / AI ile tara. | B: boş form; Y: kaydetme spinner; H: alan/API hatası, girişler korunur. | M25, M16. |
 | M27 Koşu geçmişi | Geçmiş `RunningActivity` kayıtlarını gösterir; geri + “Koşu”. | Son koşu özeti → tarihli koşu kartları → başlangıç CTA. Konum izni gerektiğinde açıklama paneli. | **Koşuyu Başlat**; koşu detayını aç. | B: “Henüz koşu yok”; Y: liste iskeleti; H: listeyi yeniden dene / izin reddinde ayarlara git. | M28, M29, M20. |
-| M28 Canlı koşu | GPS ile süre, mesafe, pace ve rotayı izler; “Koşu sürüyor” + belirgin durum. | Büyük süre → mesafe/pace metrikleri → harita → anlık durum → altta Duraklat/Devam ve Bitir. | **Koşuyu Bitir**; **Duraklat/Devam**. | B: GPS noktası yoksa “Konum bekleniyor”; Y: konum alınıyor; H: GPS kaybı belirgin uyarı, uydurma rota yok. Duraklama süresinin hesaba katılması netleşmeli. | M29. |
-| M29 Koşu özeti / detayı | Tamamlanan koşuyu gözden geçirir ve geçmişten okur; geri + “Koşu Özeti”. | Rota/harita varsa → süre/mesafe/ortalama pace/hız/kalori → kaydetme durumu. | Yeni koşu sonrası **Koşuyu Kaydet**; geçmişten açıldığında **Geçmişe Dön**. | B: rota yoksa sayısal özet; Y: kayıt gönderimi veya detay iskeleti; H: kaydedilmemiş özet korunur, tekrar dene. | M27, M20. |
+| M28 Canlı koşu | GPS ile aktif süre, mesafe, pace ve rotayı izler; “Koşu sürüyor” + belirgin durum. | Süre/mesafe/pace/hız → gerçek GPS rota çizimi (harita altlığı yok) → durum → Başlat/Duraklat/Devam ve Bitir. | **Bitir**; **Duraklat/Devam Et**. | B: GPS noktası yoksa konum beklenir; Y: konum alınıyor; H: izin/GPS ayarları ve tekrar dene. Duraklama hesaba katılmaz; zayıf GPS atlanır, uzun kayıpta duraklar. V1 ön planda, arka planda otomatik duraklar. | M29. |
+| M29 Koşu özeti / detayı | Tamamlanan koşuyu gözden geçirir ve geçmişten okur; geri + “Koşu Özeti”. | Rota çizimi → aktif süre/mesafe/ortalama pace/hız → kaydetme durumu. V1 kalori tahmini yoktur. | Bitir sonrası otomatik kayıt; hatada **Kaydı Tekrar Dene**, başarıda **Koşu Geçmişine Dön**. | B: tek nokta/sıfır mesafede pace “—”; Y: gönderim/detay; H: tamamlanmış özet güvenli cihaz deposunda korunur, aynı ID ile tekrar gönderilir. | M27, M20. |
 | M30 Günlük aktivite / sağlık verileri | Kaynağı belli adım, aktif kalori, nabız vb. gösterir; geri + “Sağlık Verileri”. | Gün seçimi → adım/aktif kalori kartları → mevcut sağlık ölçümleri → kaynak ve son senkronizasyon bilgisi varsa. | **Senkronize Et** yalnız izin varsa; **Sağlık Bağlantısı**. | B: izin yok/veri yok ayrı mesaj; Y: okuma/senkronizasyon göstergesi; H: izin veya ağ hatası, yeniden dene. | M35, M20. |
 
 ## 6. Rehberim — M31–M32
@@ -294,8 +294,8 @@ GEÇMİŞ                   CANLI KOŞU                SONUÇ
 │ Son: 5,24 km      │    │ 00:31:42          │    │ [rota / harita]   │
 │ 05 Kasım · 5,24km │    │ 5,24 km           │    │ 5,24 km · 31:42   │
 │ ...               │    │ 6:03 / km         │    │ 6:03 / km         │
-│ [Koşuyu Başlat]   │    │ ┌───────────────┐ │    │ Tah. 410 kcal    │
-│                   │    │ │ harita / rota  │ │    │ [Koşuyu Kaydet]  │
+│ [Koşuyu Başlat]   │    │ ┌───────────────┐ │    │ Kayıt durumu     │
+│                   │    │ │ GPS rota çizim│ │    │ [Tekrar Dene]    │
 │                   │    │ └───────────────┘ │    │                   │
 │                   │    │ [Duraklat] [Bitir]│    │                   │
 └───────────────────┘    └───────────────────┘    └───────────────────┘
@@ -356,6 +356,6 @@ Profil düzenleme, M34'te listelenen alanlarla standart formdur. “Bildirim ter
 
 - `NutritionGoal.WaterMl` hedefi var, içilen su kaydı yok; su ilerleme halkası gösterilmez.
 - Günlük dashboard yanıtı kişisel rekor/streak veya AI geçmişi vermez; bunlar V1 ana ekranında varsayılmaz.
-- `WorkoutSession` için yarım oturumdan devam/iptal ve tek oturum detayı yanıtı, `RunningActivity.RouteData` biçimi ile GPS kaydını kurtarma davranışı açık kalır.
+- `WorkoutSession` için yarım oturumdan devam/iptal ve tek oturum detayı yanıtı açık kalır. GPS rota/kurtarma kuralları API sözleşmesi 21. bölümünde kesinleşmiştir.
 - Danışman kısa profili mevcut API ile gösterilir; uzun biyografi ve görev/notları yazara göre kesin ayrıştırma yanıt alanları netleşince yapılır.
 - Bildirim tercihleri ve bağlı cihaz listesi için veri modeli/API yoktur. Sağlık bağlantısı işletim sistemi iznini gösterir.

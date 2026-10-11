@@ -3,13 +3,21 @@ import 'package:flutter/material.dart';
 import '../../core/api_service.dart';
 import '../nutrition/nutrition_screen.dart';
 import '../nutrition/nutrition_service.dart';
+import '../running/running_screen.dart';
+import '../running/running_service.dart';
 import 'tracking_entry_screen.dart';
 import 'tracking_models.dart';
 import 'tracking_service.dart';
 
 class TrackingScreen extends StatefulWidget {
-  const TrackingScreen({super.key, required this.api, required this.active});
+  const TrackingScreen({
+    super.key,
+    required this.api,
+    required this.active,
+    required this.userId,
+  });
   final ApiService api;
+  final String userId;
   final bool active;
   @override
   State<TrackingScreen> createState() => _TrackingScreenState();
@@ -113,6 +121,18 @@ class _TrackingScreenState extends State<TrackingScreen> {
                     ),
                     icon: const Icon(Icons.restaurant_outlined),
                     label: const Text('Beslenme'),
+                  ),
+                  const SizedBox(height: 16),
+                  OutlinedButton.icon(
+                    onPressed: () => Navigator.of(context).push<void>(
+                      MaterialPageRoute(
+                        builder: (_) => RunningScreen(
+                          service: RunningService(widget.api, widget.userId),
+                        ),
+                      ),
+                    ),
+                    icon: const Icon(Icons.directions_run),
+                    label: const Text('Koşu'),
                   ),
                   const SizedBox(height: 16),
                   if (_loading) ...[

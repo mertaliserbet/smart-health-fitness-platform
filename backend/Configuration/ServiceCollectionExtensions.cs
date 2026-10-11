@@ -28,6 +28,7 @@ public static class ServiceCollectionExtensions
         services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
         services.AddBackendAuthentication(configuration);
         services.AddScoped<SmartHealthFitness.Api.Services.TrackingService>();
+        services.AddScoped<SmartHealthFitness.Api.Services.RunningService>();
         services.AddScoped<SmartHealthFitness.Api.Services.AdvisorService>();
         services.AddScoped<SmartHealthFitness.Api.Services.WorkoutService>();
         services.AddScoped<SmartHealthFitness.Api.Services.NutritionService>();

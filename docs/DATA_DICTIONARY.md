@@ -735,6 +735,15 @@ RouteData
 CreatedAt
 ```
 
+V1 alan kuralları:
+
+- `Id` mobilin oluşturduğu UUID'dir; aynı koşunun ağ hatasından sonra tekrar gönderilmesi yeni satır oluşturmaz. `UserId` JWT'den belirlenir, `users` FK'sıdır. Kullanıcı yalnız kendi koşularını listeler/okur/ekler.
+- `StartedAt/EndedAt/CreatedAt` UTC timestamp; bitiş başlangıçtan önce veya gelecekte olamaz. `DurationSeconds` duraklamalar hariç aktif süre (1–86400), duvar saati aralığından büyük olamaz.
+- `DistanceMeters` ve `AverageSpeedKmh`: decimal(12,2); `AveragePaceSecondsPerKm`: nullable decimal(14,2). GPS segmentlerinden mesafe, aktif süreyle ortalama hız/pace backend'de hesaplanır. Sıfır mesafede pace null, hız 0.
+- `EstimatedCalories`: nullable decimal(12,2), V1'de null; uydurma kalori değeri yoktur.
+- `RouteData`: zorunlu PostgreSQL JSONB. `{type:"gps-segments",segments:[[GPS noktaları], ...]}`; noktada latitude, longitude, accuracyMeters ve UTC recordedAt bulunur. Koşul ve request/response örnekleri `API_CONTRACT.md` 21. bölümündedir. Duraklama/GPS boşlukları ayrı segmentlerdir; araları mesafeye eklenmez. Kullanıcı/başlangıç indeksli; User silinmesinde kişisel kayıtlar mevcut tracking tabloları gibi cascade silinir.
+- Mobil yalnız ön planda takip eder; arka planda otomatik duraklar. Tamamlanmış fakat gönderilememiş özet kullanıcı/API adresine özel güvenli cihaz deposunda saklanır; yeniden açılışta aynı ID ile tekrar kaydedilir. Devam eden koşu bellektedir; uygulama zorla kapatılırsa tamamlanmamış koşu kurtarılmaz.
+
 İleride eklenebilecek alanlar:
 
 ```text
