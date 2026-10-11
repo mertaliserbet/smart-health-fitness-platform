@@ -42,6 +42,13 @@ export function ProfilePage() {
         </div>
       </div>
       <section className="panel profile-panel">
+        {userId && role === 'Admin' && data?.roles.includes('User') && !loading && !error && (
+          <div className="profile-actions">
+            <Link className="button primary" to={`/kullanicilar/${userId}/danismanlar`}>
+              Danışmanları yönet
+            </Link>
+          </div>
+        )}
         {userId && role !== 'Admin' && data && !loading && !error && (
           <div className="profile-actions">
             <Link className="button secondary" to={`/danisanlar/${userId}/gorevler`}>

@@ -11,6 +11,9 @@ function TestNavigation() {
   return (
     <>
       <button onClick={() => void navigate('/kullanicilar')}>Admin sayfasına git</button>
+      <button onClick={() => void navigate('/kullanicilar/client/danismanlar')}>
+        Danışman yönetimine git
+      </button>
       <button onClick={() => void navigate('/danisanlar/unlinked-user')}>
         Bağlı olmayan danışana git
       </button>
@@ -128,6 +131,9 @@ describe('Web gezinme ve rol erişimi', () => {
     await user.click(screen.getByRole('button', { name: 'Admin sayfasına git' }));
     expect(await screen.findByRole('heading', { name: 'Merhaba, Ayşe.' })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Kullanıcılar' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Danışman yönetimine git' }));
+    expect(await screen.findByRole('heading', { name: 'Merhaba, Ayşe.' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Yeni danışman ata' })).not.toBeInTheDocument();
   });
 
   it('bağlı olmayan danışanın profilini göstermeyi reddeder', async () => {
