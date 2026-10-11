@@ -31,7 +31,13 @@ Mobil için `GET /api/users/me/advisors`, `/workout-plans`, `/nutrition-goals/ac
 
 Web'in danışan listesi/detayı, Admin kullanıcı listesi ve danışman ilişkisi yönetimi, egzersiz kataloğu yönetimi, Trainer program oluşturma/listeleme ve Dietitian hedef oluşturma/listeleme endpointleri de uygulanmıştır. Mevcut `AdvisorService`, `WorkoutService`, `NutritionService` ve `AddMobileAssignmentReads` tabloları kullanılır; bu adım yeni migration oluşturmaz. Gerçek web oturumlarında atamalar PostgreSQL'e kaydedilir ve mevcut mobil okuma endpointlerinden görülebilir.
 
-Bağlı danışana görev/not ekleme ve görev durumunu güncelleme uygulanmıştır. Web formuna Danışan Detayı → Görevler / Notlar yolundan ulaşılır; mobil kullanıcı Planım → Görevler üzerinden kendi görevini tamamlar. Admin, Kullanıcılar → kullanıcı profili → Danışmanları yönet ekranından mevcut sözleşmeyle danışman atayabilir, ilişkiyi sonlandırabilir ve geçmişi görebilir. Kendi profilini güncelleme, rol değiştirme ve antrenman oturumu endpointleri henüz uygulanmamıştır. Admin egzersiz yönetiminin web ekranı ayrı bir adımdır; mevcut API işlemleri Swagger üzerinden kullanılabilir. Test hesapları yalnız geçici PostgreSQL fixture'ında hazırlanır; uygulama başlangıcında örnek veri/hesap eklenmez.
+Bağlı danışana görev/not ekleme ve görev durumunu güncelleme uygulanmıştır. Web formuna Danışan Detayı → Görevler / Notlar yolundan ulaşılır; mobil kullanıcı Planım → Görevler üzerinden kendi görevini tamamlar.
+
+Admin, Kullanıcılar → kullanıcı profili → Danışmanları yönet ekranından mevcut sözleşmeyle danışman atayabilir, ilişkiyi sonlandırabilir ve geçmişi görebilir.
+
+Admin egzersiz yönetimi web ekranı katalog listeleme, oluşturma, düzenleme ve aktif/pasif durum yönetimini içerir.
+
+Aktif antrenman programı düzenleme uygulanmıştır. Kendi profilini güncelleme, rol değiştirme ve antrenman oturumu endpointleri henüz uygulanmamıştır. Test hesapları yalnız geçici PostgreSQL fixture'ında hazırlanır; uygulama başlangıcında örnek veri/hesap eklenmez.
 
 Base path:
 
@@ -944,9 +950,12 @@ Opsiyonel query:
 ```text
 search
 muscleGroupId
+includeInactive (bool, varsayılan false; true yalnız Admin)
 ```
 
 Uygulanmıştır; `ExerciseResponse[]`, yalnız aktif egzersizler, ad/ID sıralaması ve `no-store` ile döner. `search` en fazla 200 karakterdir. `MuscleGroup` tabloları henüz yoktur; `muscleGroupId` gönderilirse bu aşamada `400` ve `errors.muscleGroupId` döner. Bu filtre sessizce yok sayılmaz.
+
+Admin katalog yönetimi için aynı route üzerinde `includeInactive=true` kullanır. Bu durumda aktif ve pasif kayıtlar birlikte `ExerciseDetailResponse[]` olarak döner; her öğe aşağıdaki alanlara ek olarak bool `isActive` içerir. `search`, ad/ID sıralaması ve `no-store` bu görünümde de uygulanır. Admin olmayan hesap için `true` → `403`, geçersiz bool → `400`, oturumsuz istek → `401`. Parametre verilmezse veya `false` ise mevcut aktif liste ve yanıt alanları tüm roller için korunur. Pasif kayıtlar mevcut detay/güncelleme route'ları üzerinden yeniden aktif edilebilir; yeni tablo veya migration gerekmez.
 
 Response:
 

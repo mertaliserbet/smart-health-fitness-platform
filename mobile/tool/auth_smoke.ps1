@@ -5,7 +5,8 @@ param(
     [switch] $AssignmentTest,
     [switch] $AssignmentWriteTest,
     [switch] $NutritionTest,
-    [switch] $RunningTest
+    [switch] $RunningTest,
+    [switch] $TrackingProgressTest
 )
 
 $ErrorActionPreference = 'Stop'
@@ -85,7 +86,7 @@ try {
         if ($LASTEXITCODE -ne 0 -or ($stored -join '').Trim() -ne '1') { throw 'Android GPS run was not persisted in PostgreSQL.' }
         Write-Output 'PASS: native Android GPS start/pause/resume/finish -> PostgreSQL -> own history/detail, retry and user isolation.'
     }
-    elseif ($NutritionTest) {
+    elseif ($NutritionTest -or $TrackingProgressTest) {
         # The user creates every NutritionRecord through Flutter; only advisor prerequisites are seeded.
         $nutritionIds = @{}
         foreach ($account in @('user', 'other', 'dietitian')) {
@@ -104,13 +105,24 @@ try {
         [void] (Invoke-RestMethod "http://127.0.0.1:$ApiPort/api/users/$nutritionUserId/nutrition-goals" -Method Post `
             -Headers @{Authorization="Bearer $($dietitianLogin.accessToken)"} -ContentType 'application/json' -Body $goalBody)
         Set-Location (Join-Path $repositoryRoot 'mobile')
-        flutter test integration_test/nutrition_flow_test.dart -d $Device `
-            "--dart-define=API_BASE_URL=http://10.0.2.2:$ApiPort" --dart-define=NUTRITION_TEST_FIXTURE=true
-        if ($LASTEXITCODE -ne 0) { throw 'Android nutrition integration test failed.' }
-        $stored = & docker compose -f $composeFile -p $fixtureName exec -T postgres psql -U mobile_auth_check -d mobile_auth_check -At -c `
-            "SELECT count(*)::text || ':' || sum(calories)::text || ':' || sum(protein_grams)::text FROM nutrition_records WHERE user_id='$nutritionUserId';"
-        if ($LASTEXITCODE -ne 0 -or ($stored -join '').Trim() -ne '2:1100.50:68.50') { throw 'Android meal totals were not persisted in PostgreSQL.' }
-        Write-Output 'PASS: real Android manual meals -> API -> PostgreSQL -> daily totals/active goal/history; second user isolation.'
+        if ($TrackingProgressTest) {
+            flutter test integration_test/tracking_progress_flow_test.dart -d $Device `
+                "--dart-define=API_BASE_URL=http://10.0.2.2:$ApiPort" --dart-define=TRACKING_PROGRESS_TEST_FIXTURE=true
+            if ($LASTEXITCODE -ne 0) { throw 'Android tracking progress integration test failed.' }
+            $stored = & docker compose -f $composeFile -p $fixtureName exec -T postgres psql -U mobile_auth_check -d mobile_auth_check -At -c `
+                "SELECT (SELECT count(*) FROM weight_records WHERE user_id='$nutritionUserId')::text || ':' || (SELECT count(*) FROM body_measurements WHERE user_id='$nutritionUserId')::text || ':' || (SELECT count(*) FROM nutrition_records WHERE user_id='$nutritionUserId')::text || ':' || (SELECT count(*) FROM running_activities WHERE user_id='$nutritionUserId')::text;"
+            if ($LASTEXITCODE -ne 0 -or ($stored -join '').Trim() -ne '4:4:1:4') { throw 'Tracking records were not persisted in PostgreSQL.' }
+            Write-Output 'PASS: Android tracking charts, 7/30/all filters, daily goal comparison and running totals from PostgreSQL; second user empty states.'
+        }
+        else {
+            flutter test integration_test/nutrition_flow_test.dart -d $Device `
+                "--dart-define=API_BASE_URL=http://10.0.2.2:$ApiPort" --dart-define=NUTRITION_TEST_FIXTURE=true
+            if ($LASTEXITCODE -ne 0) { throw 'Android nutrition integration test failed.' }
+            $stored = & docker compose -f $composeFile -p $fixtureName exec -T postgres psql -U mobile_auth_check -d mobile_auth_check -At -c `
+                "SELECT count(*)::text || ':' || sum(calories)::text || ':' || sum(protein_grams)::text FROM nutrition_records WHERE user_id='$nutritionUserId';"
+            if ($LASTEXITCODE -ne 0 -or ($stored -join '').Trim() -ne '2:1100.50:68.50') { throw 'Android meal totals were not persisted in PostgreSQL.' }
+            Write-Output 'PASS: real Android manual meals -> API -> PostgreSQL -> daily totals/active goal/history; second user isolation.'
+        }
     }
     elseif ($AssignmentTest -or $AssignmentWriteTest) {
         # Register disposable accounts via the API; seed assignments only in this test database.

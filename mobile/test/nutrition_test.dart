@@ -10,6 +10,7 @@ import 'package:smart_health_fitness_mobile/features/nutrition/nutrition_entry_s
 import 'package:smart_health_fitness_mobile/features/nutrition/nutrition_models.dart';
 import 'package:smart_health_fitness_mobile/features/nutrition/nutrition_screen.dart';
 import 'package:smart_health_fitness_mobile/features/nutrition/nutrition_service.dart';
+import 'package:smart_health_fitness_mobile/features/nutrition/nutrition_summary_card.dart';
 
 import 'app_shell_test.dart' show openApp;
 import 'auth_service_test.dart' show makeApi, jsonResponse, tokens, userJson;
@@ -57,7 +58,8 @@ Future<void> openNutrition(
     handler: (request) async {
       if (request.url.path == '/api/users/me') return jsonResponse(userJson);
       if (request.url.path == '/api/users/me/weight-records' ||
-          request.url.path == '/api/users/me/body-measurements') {
+          request.url.path == '/api/users/me/body-measurements' ||
+          request.url.path == '/api/users/me/running-activities') {
         return jsonResponse([]);
       }
       return handler(request);
