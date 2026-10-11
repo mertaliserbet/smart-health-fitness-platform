@@ -29,7 +29,29 @@ Bu dosya aşağıdaki dokümanlarla birlikte değerlendirilmelidir:
 
 Mobil için `GET /api/users/me/advisors`, `/workout-plans`, `/nutrition-goals/active`, `/tasks`, `/advisor-notes` ve `GET /api/workout-plans/{workoutPlanId}` uygulanmıştır. `AddMobileAssignmentReads` migration'ı gerekli kalıcı veri altyapısını ekler. Flutter demo/stub veri kullanmadan bu endpointlerden okur. Listelerde kayıt yoksa `200 []`; geçerli aktif hedef yoksa ayırt edici kodla `404` döner.
 
-Bu çalışma yalnız kalıcı veri altyapısı ve okumaları içerir. Admin atama, Trainer program oluşturma, Dietitian hedef oluşturma, görev/not yazma ve web'in diğer endpointleri henüz uygulanmamıştır; ilgili aşağıdaki sözleşmeler uygulanmış API sayılmaz. Test atamaları yalnız geçici PostgreSQL fixture'ında hazırlanır; uygulama başlangıcında örnek veri/hesap eklenmez.
+Trainer program oluşturma/atama, Dietitian hedef atama, bağlı danışana görev/not ekleme ve görev durumunu güncelleme uygulanmıştır. Web'in mevcut program/hedef formları gerçek API'yi kullanır; görev/not formuna Danışan Detayı → Görevler / Notlar yolundan ulaşılır. Mobil kullanıcı Planım → Görevler üzerinden kendi görevini tamamlar. Admin rol/ilişki atama ve egzersiz yönetimi bu çalışmanın kapsamı dışındadır; aşağıdaki diğer sözleşmeler otomatik olarak uygulanmış API sayılmaz. Uygulama başlangıcında örnek veri/hesap eklenmez.
+
+### Uygulanmış danışan yazma akışı
+
+| Endpoint | Yetki | Başarı yanıtı |
+|---|---|---|
+| `GET /api/trainers/me/clients` | Trainer | `200 ClientSummaryResponse[]` |
+| `GET /api/dietitians/me/clients` | Dietitian | `200 ClientSummaryResponse[]` |
+| `GET /api/users/{userId}` | Bağlı Trainer/Dietitian veya Admin | `200 UserProfileResponse` |
+| `GET /api/exercises?search=...` | Giriş yapmış kullanıcı | `200 ExerciseResponse[]`, yalnız aktif katalog |
+| `GET /api/users/{userId}/workout-plans` | Bağlı Trainer | `200 WorkoutPlanSummaryResponse[]` |
+| `POST /api/users/{userId}/workout-plans` | Bağlı Trainer | `201 WorkoutPlanResponse`, `Location` detay adresi |
+| `GET /api/users/{userId}/nutrition-goals` | Bağlı Dietitian | `200 NutritionGoalResponse[]` |
+| `POST /api/users/{userId}/nutrition-goals` | Bağlı Dietitian | `201 NutritionGoalResponse` |
+| `GET /api/users/{userId}/tasks` | Bağlı Trainer/Dietitian | `200 UserTaskResponse[]` |
+| `POST /api/users/{userId}/tasks` | Bağlı Trainer/Dietitian | `201 UserTaskResponse` |
+| `GET /api/users/{userId}/advisor-notes` | Bağlı Trainer/Dietitian | `200 AdvisorNoteResponse[]` |
+| `POST /api/users/{userId}/advisor-notes` | Bağlı Trainer/Dietitian | `201 AdvisorNoteResponse` |
+| `PATCH /api/tasks/{taskId}` | Görev sahibi User veya görevi oluşturan aktif danışman | `200 UserTaskResponse` |
+
+`ClientSummaryResponse`: `id`, `firstName`, `lastName`, `relationshipStatus: "Active"`, `startDate`. `ExerciseResponse`: `id`, `name`, nullable `description`, `instructions`, `videoUrl`, `imageUrl`. Egzersiz okumasında şu anda yalnız `search` filtresi uygulanır; kas grubu filtrelemesi ve yönetim endpointleri uygulanmamıştır.
+
+Bağlı danışan yetkisi, `UserAdvisor.Status = Active`, ilgili `AdvisorType`, aktif danışan hesabındaki `User` rolü ve aktif danışman hesabının veritabanındaki gerçek rolüyle doğrulanır. Yetkisiz/bağsız danışan işlemi `403 ProblemDetails`; anonim istek `401`; validation `400 ValidationProblemDetails` döner. Advisor/Trainer/Dietitian kimlikleri JWT'den alınır. POST/PATCH gövdelerinde bilinmeyen alanlar reddedilir; istemci kimlik veya başlangıç durumunu değiştiremez. Yazmalar transaction içinde yapılır; aynı kullanıcıya eşzamanlı atamalar sırayla işlenir. Hatalı atama önceki aktif kaydı değiştirmez.
 
 Base path:
 
@@ -768,7 +790,7 @@ Her öğe veri sözlüğündeki alanları taşır:
 
 Yazar adı bu yanıtta yoktur; mobil yazar ismi üretmez.
 
-Kendi notlarını okuma uygulanmıştır; belirli danışanın notlarını okuma ve not oluşturma henüz uygulanmamıştır. Notlar en yeni `createdAt` önce olacak şekilde sıralanır; danışman ilişkisi sonlandırılsa da kullanıcının geçmiş notları korunur.
+Kendi/bağlı danışanın notlarını okuma ve not oluşturma uygulanmıştır. Notlar en yeni `createdAt` önce olacak şekilde sıralanır; danışman ilişkisi sonlandırılsa da kullanıcının geçmiş notları korunur. Aktif bağlı danışman, aynı danışana ait diğer danışmanın notlarını da okuyabilir.
 
 ---
 
@@ -834,7 +856,7 @@ Yetki: `User`, yalnızca oturumdaki kullanıcının görevleri. Response: `200 O
 | completedAt, updatedAt | UTC ISO 8601 tarih/saat veya null |
 | createdAt | UTC ISO 8601 tarih/saat |
 
-Kendi görevlerini okuma uygulanmıştır. `status` büyük/küçük harfe duyarlıdır; bilinmeyen veya sayısal değer `400 ValidationProblemDetails` döner. Görevler en yeni `createdAt` önce olacak şekilde sıralanır. Atama ve durum değiştirme endpointleri henüz uygulanmamıştır.
+Kendi/bağlı danışanın görevlerini okuma, atama ve durum değiştirme uygulanmıştır. Kendi listesinde `status` büyük/küçük harfe duyarlıdır; bilinmeyen veya sayısal değer `400 ValidationProblemDetails` döner. Görevler en yeni `createdAt` önce olacak şekilde sıralanır. Danışan listesi tüm durumları döner; query ile başka kullanıcı seçilemez.
 
 ---
 
@@ -884,6 +906,8 @@ Response:
 
 ---
 
+Görev oluşturulurken `Pending`, `completedAt: null` olur. Başlık zorunlu, boşluklardan oluşamaz ve en fazla 200 karakterdir. Açıklama opsiyoneldir; `dueDate` varsa geçerli `YYYY-MM-DD` olmalıdır. Notta aynı başlık kuralı ve zorunlu, boş olmayan `content` uygulanır. Görev/not POST yanıtları oluşturulan kaydı yukarıdaki DTO alanlarıyla döner.
+
 ## 13.4 Görev Durumunu Güncelle
 
 ```http
@@ -904,6 +928,8 @@ Request:
   "status": "Completed"
 }
 ```
+
+Başarı: `200 UserTaskResponse`. User yalnız kendi `Pending`/`InProgress` görevini `Completed` yapabilir; başka durum isteği `403`. Görevi oluşturan danışman için halen aktif ilişki gerekir; `Pending`/`InProgress` durumundan tanımlı durumlara geçebilir. `Completed` ve `Cancelled` son durumlardır; farklı duruma geçiş `409 ProblemDetails` döner. Aynı durumun tekrar gönderilmesi `200` ile aynı kaydı döner ve `completedAt` değişmez. Tamamlama zamanı backend tarafından UTC olarak atanır. Başkasının veya bulunamayan görev için aynı `404 ProblemDetails` döner; diğer bağlı danışman görevin durumunu değiştiremez. Sayısal/bilinmeyen/küçük harfli status `400` döner.
 
 ---
 
@@ -1124,7 +1150,7 @@ Response:
 201 Created
 ```
 
-`weekday` zorunludur ve `Monday`–`Sunday` string değerlerinden biridir. `dayNumber` yalnızca program içi sıralamadır. Aynı plandaki iki gün aynı `weekday` değerini alamaz (`400 Bad Request`). V1'de yeni aktif plan önceki aktif planı pasifleştirir. `PUT /api/workout-plans/{workoutPlanId}` aynı gün benzersizliği ve tarih aralığı kuralını korur.
+Başarı gövdesi 15.3'teki `WorkoutPlanResponse` alanlarını içerir. `name` ve gün adı zorunlu, en fazla 200 karakterdir. `startDate` zorunlu; `endDate` varsa başlangıçtan önce olamaz. `days` 1–7 öğe, her gün en az bir aktif katalog egzersizi içermelidir. `weekday` zorunludur ve `Monday`–`Sunday` string değerlerinden biridir. `dayNumber` pozitif ve program içinde benzersizdir; yalnız sıralama içindir. Aynı plandaki iki gün aynı `weekday` değerini alamaz (`400`). Egzersiz `order` pozitif ve gün içinde benzersizdir; `sets`, `reps`, `durationSeconds` varsa pozitif tamsayıdır. Set+tekrar veya süre gereklidir; `restSeconds` varsa sıfır/pozitif tamsayı; `weightKg` varsa 0–99999999.99, en fazla iki ondalık basamaktır. V1'de yeni aktif plan önceki aktif planı aynı transaction içinde pasifleştirir ve geçmişi korur. Program güncelleme `PUT` endpointi henüz uygulanmamıştır.
 
 ---
 
@@ -1437,6 +1463,8 @@ Request:
 ```
 
 Başarı: `201 Created`; yanıt oluşturulan `NutritionGoal` kaydını 19.1'deki alanlarla ve `isActive: true` değeriyle döner. V1'de yeni hedef doğrudan aktif oluşturulur; aynı kullanıcının önceki aktif `NutritionGoal` kaydı aynı veritabanı işleminde pasifleştirilir. Kullanıcı başına en fazla bir aktif hedef vardır. `startDate`/`endDate` geçerlilik aralığı dışında mobilde günlük hedef gösterilmez; eski hedef otomatik olarak yeniden etkinleşmez.
+
+Beş sayısal hedef ve `startDate` zorunludur. Hedefler 0–9999999999.99, en fazla iki ondalık basamaklı JSON number olmalıdır. Bu sınırlar DB hassasiyeti içindir, sağlık önerisi değildir. `endDate` opsiyonel olup başlangıçtan önce olamaz. Bağlı danışan geçmişi `200 NutritionGoalResponse[]`, aktif kayıt önce, sonra oluşturma zamanı azalan sırada döner; kayıt yoksa `[]`.
 
 ---
 

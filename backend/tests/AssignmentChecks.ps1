@@ -104,3 +104,6 @@ foreach ($sql in @(
     [void] (Invoke-CheckSql ('DO $check$ BEGIN BEGIN ' + $sql + '; RAISE EXCEPTION ''Constraint did not reject duplicate''; EXCEPTION WHEN unique_violation THEN NULL; END; END $check$;'))
 }
 Write-Output 'PASS: real PostgreSQL assignment DTOs, owner/role isolation, Trainer access, task filters, active advisors, nutrition dates/error code and unique constraints.'
+& (Join-Path $PSScriptRoot 'AssignmentWriteChecks.ps1') -UserId $FirstUserId -OtherId $SecondUserId `
+    -UserToken $FirstToken -OtherToken $SecondToken -TrainerToken $advisorTokens.Trainer `
+    -DietitianToken $advisorTokens.Dietitian -AdminToken $advisorTokens.Admin

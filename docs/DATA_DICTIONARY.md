@@ -21,11 +21,11 @@ Bu dosya, `NAMING_CONVENTIONS.md` ile birlikte proje terminolojisinin ana refera
 
 - Kimlikler UUID; takvim alanları PostgreSQL `date` / C# `DateOnly`, oluşturma/güncelleme zamanları UTC `timestamptz` kullanır. Enumlar string saklanır ve JSON'da string döner.
 - User, danışman, Trainer ve Dietitian referansları `users` tablosuna foreign key ile bağlıdır; atama verileri varken kullanıcı silme `Restrict` davranışıyla korunur. Plan silinirse kendi gün/egzersiz satırları `Cascade`; egzersiz kataloğu referansı `Restrict` olur.
-- Bir kullanıcı-danışman çifti için tek aktif ilişki, kullanıcı başına tek aktif program/hedef ve program başına tek `Weekday` PostgreSQL filtreli/benzersiz indekslerle korunur. Gün sırası ve gün içi egzersiz sırası da benzersizdir. Gelecekteki yazma servisleri önceki aktif program/hedefi aynı transaction içinde pasifleştirmelidir; okuma endpointi otomatik aktivasyon/pasifleştirme yapmaz.
+- Bir kullanıcı-danışman çifti için tek aktif ilişki, kullanıcı başına tek aktif program/hedef ve program başına tek `Weekday` PostgreSQL filtreli/benzersiz indekslerle korunur. Gün sırası ve gün içi egzersiz sırası da benzersizdir. Yazma servisleri önceki aktif program/hedefi aynı transaction içinde pasifleştirir; okuma endpointi otomatik aktivasyon/pasifleştirme yapmaz. Aynı kullanıcıya eşzamanlı yazmalar kullanıcı satırı kilidiyle sıraya alınır; ilişki yazma tamamlanana kadar korunur.
 - `UserAdvisor` varsayılan durumu `Active` olur. Aktifte `EndDate` null; Ended/Cancelled durumunda `EndDate >= StartDate` zorunludur. Kendi kendine danışman ilişkisi reddedilir. Rehberim yalnız aktif ilişki ve aktif, ilgili danışman rolünü taşıyan kullanıcıları gösterir; opsiyonel aktif profil yoksa isim/rol gösterilir, ünvan/uzmanlık null kalır. Profil aynı kullanıcı ve danışman türü için tektir.
 - Beslenme hedefleri negatif olamaz; `numeric(12,2)` saklanır. Egzersiz ağırlığı `numeric(10,2)`; set/tekrar/süre pozitif, dinlenme/ağırlık negatif olamaz. Plan/hedef `EndDate` null veya `StartDate` ve sonrasıdır.
 - İsim ve başlıklar en fazla 200 karakter; uzmanlık 500, katalog görsel/video URL'leri 2048 karakterdir. Not içeriği, açıklamalar ve biyografi `text`; güncel alan isimleri değişmez. Görev açıklaması/son tarihi/tamamlanma zamanı ve güncelleme zamanları nullable'dır.
-- User görev/notları ilişki sona erse de kendi geçmişinde kalır. Bu aşama yalnız okuma endpointlerini sunar; uygulamada seed/demo verisi veya atama/yazma akışı yoktur. Entegrasyon fixture'ları yalnız geçici test veritabanını doldurur.
+- User görev/notları ilişki sona erse de kendi geçmişinde kalır. Program/hedef/görev/not yazma ve görev tamamlama mevcut tabloları kullanır; bu çalışma için yeni entity/migration gerekmez. Uygulamada seed/demo atama yapılmaz. Entegrasyon fixture'ları yalnız geçici test veritabanını doldurur.
 
 ---
 
@@ -301,6 +301,8 @@ InProgress
 Completed
 Cancelled
 ```
+
+V1 yazma davranışı: Görevi aktif bağlı Trainer/Dietitian oluşturur; ilk durum `Pending`, `CompletedAt = null` olur. User yalnız kendi bekleyen/devam eden görevini tamamlar. Görevi oluşturan danışmanın durum değiştirmesi için aktif ilişki gerekir. `Completed` ve `Cancelled` son durumdur; yeniden açılmaz. Aynı durum tekrar gönderildiğinde kayıt ve tamamlanma zamanı korunur. `CompletedAt` tamamlamada sunucu tarafından UTC atanır; istemciden alınmaz. Görev/not başlığı boş olamaz ve en fazla 200 karakterdir; not içeriği zorunludur.
 
 Örnek görevler:
 

@@ -49,6 +49,16 @@ void main() {
       await settle(tester);
       expect(find.text('Esneme yap'), findsOneWidget);
       expect(find.text('Başkasının görevi'), findsNothing);
+      if (const bool.fromEnvironment('ASSIGNMENT_WRITE_TEST_FIXTURE')) {
+        await tester.ensureVisible(find.text('Tamamlandı olarak işaretle'));
+        await tester.tap(find.text('Tamamlandı olarak işaretle'));
+        await settle(tester);
+        expect(find.text('Tamamlandı'), findsOneWidget);
+        expect(find.text('Tamamlandı olarak işaretle'), findsNothing);
+        final tasks = await api.getList('/api/users/me/tasks');
+        expect(tasks.single['status'], 'Completed');
+        expect(tasks.single['completedAt'], isNotNull);
+      }
       await tester.ensureVisible(find.text('Koç notu'));
       expect(find.text('Hareketleri kontrollü yap.'), findsOneWidget);
       await tab(tester, 4);
