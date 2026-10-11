@@ -24,16 +24,17 @@ Adres: http://localhost:5173. Port doluysa Vite başka port seçmez; backend COR
 - Trainer/Dietitian için **Danışan Detayı → Görevler / Notlar**: gerçek görev/not atama, geçmiş ve görev durumu. İstek hatasında form korunur; gönderim sırasında yinelenen kaydetme engellenir. Mobil kullanıcı görevi tamamlayınca sayfa yeniden açıldığında veya yenilendiğinde güncel durum görülür.
 - Admin kullanıcı listesi, sayfalama ve temel hesap bilgileri. Admin ekranında kişisel sağlık verisi gösterilmez.
 - Admin için **Kullanıcılar → kullanıcı profili → Danışmanları yönet**: rol/isim/e-posta filtreli, sayfalı danışman seçimi; antrenör/diyetisyen atama; aktif ilişkiyi sonlandırma veya iptal etme; salt okunur ilişki geçmişi.
+- Admin için **Egzersizler → Yeni egzersiz / Düzenle**: açıklama, uygulama talimatları, video/görsel bağlantıları ve aktif/pasif durum yönetimi. İsim ve durum filtreleri birlikte çalışır; pasif egzersizler yeniden aktif edilebilir.
 - Çoklu web rolünde yalnız hesaba atanmış rollerden panel seçimi. `User` hesabı mobil uygulamaya yönlendiren açıklama görür.
 - Responsive koyu arayüz; klavye odağı, görünür alan etiketleri ve yükleniyor/boş/hata durumları.
 
-Program düzenleme, beslenme kayıtları/ilerleme, profil düzenleme, rol yönetimi ve egzersiz/ekipman yönetim formları henüz uygulanmadı. Tamamlanmamış işlemler için işlevsiz düğmeler gösterilmez.
+Program düzenleme, beslenme kayıtları/ilerleme, profil düzenleme, rol yönetimi ve ekipman yönetim formu henüz uygulanmadı. Tamamlanmamış işlemler için işlevsiz düğmeler gösterilmez.
 
 ## Gerçek API bağlantısı
 
 Varsayılan `/api` istekleri geliştirmede Vite proxy üzerinden `http://localhost:5000` adresine gider. API'yi backend README'sine göre başlatın. Ayrı API adresi için `.env.example` dosyasını `.env.local` adıyla kopyalayıp `VITE_API_BASE_URL` ayarlayın. `VITE_` değişkenleri tarayıcıya açıktır; gizli anahtar eklemeyin.
 
-API sözleşmesi değiştirilmez. Kullanılan istekler:
+İstekler `docs/API_CONTRACT.md` sözleşmesini kullanır. Admin katalog listesi için mevcut route'a `includeInactive=true` seçeneği eklenmiştir; Trainer/mobil varsayılan liste yanıtı korunur. Kullanılan istekler:
 
 | İşlem                        | Endpoint                                                                 |
 | ---------------------------- | ------------------------------------------------------------------------ |
@@ -46,6 +47,9 @@ API sözleşmesi değiştirilmez. Kullanılan istekler:
 | Danışman ilişkileri ve atama | `GET /api/user-advisors?userId=...`, `POST /api/user-advisors`           |
 | İlişkiyi sonlandırma         | `PATCH /api/user-advisors/{userAdvisorId}`                               |
 | Egzersiz kataloğu            | `GET /api/exercises`                                                     |
+| Admin egzersiz kataloğu      | `GET /api/exercises?includeInactive=true`                                |
+| Egzersiz detayı / güncelleme | `GET/PUT /api/exercises/{exerciseId}`                                    |
+| Egzersiz oluşturma           | `POST /api/exercises`                                                    |
 | Danışanın programları        | `GET /api/users/{userId}/workout-plans`                                  |
 | Program detayı               | `GET /api/workout-plans/{workoutPlanId}`                                 |
 | Program oluşturma ve atama   | `POST /api/users/{userId}/workout-plans`                                 |
@@ -55,9 +59,13 @@ API sözleşmesi değiştirilmez. Kullanılan istekler:
 
 Refresh token `sessionStorage` içinde sekme oturumu boyunca saklanır; access token yalnız bellektedir. Sayfa yenilenince refresh ve ardından `/api/users/me` ile oturum doğrulanır. Eşzamanlı `401` cevapları tek refresh isteğini paylaşır. Başarısız yenileme veya tekrar `401` oturumu kapatır. `403` için refresh denenmez. Sunucu çıkışı başarısız olsa bile yerel oturum temizlenir ve kullanıcıya açıklanır.
 
-Tablodaki endpointler backend'de uygulanmıştır. Danışan listesi yalnız aktif ilişkileri içerir; başka kullanıcının profilini yalnız atanmış danışman veya Admin okuyabilir. Admin temel hesap alanlarını görür; kişisel sağlık alanları ayrıca aktif danışman ilişkisi gerektirir. Web'deki menü/route denetimlerine ek olarak JWT, rol ve aktif `UserAdvisor` denetimi backend tarafından uygulanır. Public register yalnız User hesabı üretir; danışman/Admin rolleri güvenilir kurulum sırasında verilir. Admin ilişki atama/sonlandırma web formu hazırdır; egzersiz oluşturma/güncelleme web formu henüz yoktur.
+Tablodaki endpointler backend'de uygulanmıştır. Danışan listesi yalnız aktif ilişkileri içerir; başka kullanıcının profilini yalnız atanmış danışman veya Admin okuyabilir. Admin temel hesap alanlarını görür; kişisel sağlık alanları ayrıca aktif danışman ilişkisi gerektirir. Web'deki menü/route denetimlerine ek olarak JWT, rol ve aktif `UserAdvisor` denetimi backend tarafından uygulanır. Public register yalnız User hesabı üretir; danışman/Admin rolleri güvenilir kurulum sırasında verilir. Admin ilişki atama/sonlandırma ve egzersiz oluşturma/güncelleme web formları hazırdır. Egzersiz oluşturma/güncelleme ve pasif kayıtların katalogda listelenmesi Admin rolü gerektirir; Trainer kataloğu salt okunurdur.
 
 Danışman yönetimi yalnız `User` rolüne sahip hesaplara açılır. Yeni ilişkinin `startDate` değeri gönderim anındaki UTC takvim günüdür. Kullanıcının kendisi ve aynı kişiyle mevcut aktif ilişki seçimde engellenir; farklı danışmanlar atanabilir. Backend aktif hesap ve rolü tekrar doğrular. Sonlandırmada yalnız `Ended`/`Cancelled` seçilir; bitiş tarihi başlangıçtan önce veya bugünün UTC tarihinden sonra olamaz. Sonlandırma öncesinde sonuçları gösteren bir form açılır; geçmiş kayıtlar silinmez. Hata halinde form korunur, yinelenen gönderim engellenir; `409` halinde güncel ilişki geçmişi tekrar yüklenir. Geçmişteki ilişki yeniden açılmaz; yeni atama ayrı kayıt oluşturur. İlişki listesi yenilenemediğinde atama kapalı kalır.
+
+Egzersiz formu POST/PUT işlemlerinde mevcut `CreateExerciseRequest` alanlarının tamamını gönderir; düzenlemede talimatlar ve bağlantılar korunur. Boş isteğe bağlı alanlar `null`, metinler kırpılarak gönderilir. Alan uzunlukları ve HTTP(S) bağlantıları formda doğrulanır. Başarı için `ExerciseDetailResponse` JSON yanıtı gerekir; hata halinde alanlar korunur ve yinelenen gönderim engellenir. Başarıdan sonra katalog yeniden okunur. Pasifleştirme geçmiş programları silmez, yeni programlarda seçimi engeller.
+
+Admin giriş → egzersiz ekleme → düzenleme/pasifleştirme → yeniden aktifleştirme akışı tarayıcıda ayrı geçici PostgreSQL ile doğrulandı. Kayıtların ve talimatların kalıcılığı, pasif kaydın Trainer kataloğundan çıkarılması, yeniden aktif kaydın geri gelmesi ve Trainer'ın düzenleme URL'sine erişememesi kontrol edildi.
 
 Program formu mevcut `CreateWorkoutPlanRequest` alanlarıyla POST gönderir; Trainer kimliği request'e eklenmez, backend access token'dan alır. Güncel API `201 WorkoutPlanResponse` JSON yanıtı döner; web daha eski gövdesiz `201` yanıtıyla da çalışabilir. Başarıdan sonra danışanın program listesi yeniden yüklenir; istek hatasında form korunur. Atamadan hemen önce aktif danışan listesi tekrar kontrol edilir. Backend aktif ilişkiyi ve tek aktif program kuralını aynı transaction içinde uygular; pasif egzersizler yeni atamada kullanılamaz. Gün/egzersiz sıra kuralları ve ağırlık alanındaki en fazla iki ondalık basamak hem formda hem backend'de doğrulanır.
 
@@ -75,6 +83,8 @@ Diyetisyen önizlemesinde **Beslenme Hedefleri → danışan seç → Yeni hedef
 
 Danışman ilişkisi yönetimi, görev/not ekranı gibi gerçek yetkili hesapla kullanılır. Yönetici önizlemesinde bu ekrana girildiğinde açıklama gösterilir; gerçek API'ye istek veya atama gönderilmez.
 
+Yönetici önizlemesinde egzersiz kataloğu salt okunur. Ekleme/düzenleme için gerçek Admin oturumu gerekir; önizlemeden bu sayfaların URL'leri açılsa da sunucuya istek gönderilmez.
+
 Örnek giriş yalnız Vite development modunda kullanılabilir; production build örnek veri modülünü ve giriş düğmelerini içermez. Production build'in `/api` yolunu ASP.NET Core'a ileten reverse proxy veya `VITE_API_BASE_URL` ayarı gerekir. Hosting, backend CORS ve HTTPS yayın aşamasında birlikte yapılandırılmalıdır.
 
 ## Kontroller
@@ -86,6 +96,8 @@ npm run format:check
 ```
 
 Testler; token yenileme/eşzamanlı istek, çıkış sırasında yenileme, 401/403 ayrımı, alan hataları, rol sınırları, panel seçimi, danışan araması ve profil geçişini doğrular. API yanıtları testlerde taklit edilir; bu testler gerçek backend entegrasyonunun yerine geçmez.
+
+Egzersiz yönetimi testleri aktif/pasif arama, POST/PUT sözleşmesi, talimatların korunması, pasifleştirme/yeniden aktifleştirme, alan ve sunucu hataları, geçersiz başarı yanıtı, yinelenen gönderim, sayfadan ayrılınca istek iptali, yeniden deneme ve rol/önizleme sınırlarını kapsar. `backend/tests/AdvisorWorkflowChecks.ps1` geçici PostgreSQL üzerinde Admin katalog görünümünü, diğer rollerin erişiminin reddini ve pasif egzersizlerin Trainer/mobil varsayılan kataloğundan çıkarılıp geçmiş programlarda korunmasını doğrular.
 
 Danışman yönetimi testleri; profil bağlantısı/rol sınırları, UTC atama tarihi ve request alanları, sunucuda filtreleme/sayfalama, kendine/yinelenen aktif ilişkiye atama engeli, API hatasında seçimlerin korunması, çift gönderim, eşzamanlı atamada `409` sonrası yenileme, tarih doğrulaması, ilişki iptali/geçmiş ve sayfadan ayrılınca istek iptalini kapsar. Yerel tarayıcı kontrolünde iki danışman gerçek PostgreSQL'e atanmış; mobil danışman API'sinde ve danışman listelerinde görülmüş; `Ended`/`Cancelled` sonrası aktif okumalardan kaldırılıp Admin geçmişinde korundukları doğrulanmıştır. Flutter ekranı bu kontrol kapsamında çalıştırılmaz.
 

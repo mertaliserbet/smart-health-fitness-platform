@@ -14,11 +14,15 @@ namespace SmartHealthFitness.Api.Controllers;
 public sealed class ExercisesController(ExerciseService exerciseService) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<ExerciseResponse[]>> GetExercisesAsync([FromQuery, StringLength(200)] string? search,
-        [FromQuery] Guid? muscleGroupId, CancellationToken cancellationToken)
+    [ProducesResponseType(typeof(ExerciseResponse[]), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetExercisesAsync([FromQuery, StringLength(200)] string? search,
+        [FromQuery] Guid? muscleGroupId, [FromQuery] bool includeInactive, CancellationToken cancellationToken)
     {
+        if (includeInactive && !User.IsInRole(RoleNames.Admin)) return Forbid();
         if (muscleGroupId is not null)
             throw AssignmentException.Invalid("muscleGroupId", "Kas grubu filtreleme bu aşamada desteklenmiyor.");
+        if (includeInactive)
+            return Ok(await exerciseService.GetManagedExercisesAsync(search, cancellationToken));
         return Ok(await exerciseService.GetExercisesAsync(search, cancellationToken));
     }
 
