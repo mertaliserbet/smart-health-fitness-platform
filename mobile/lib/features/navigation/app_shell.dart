@@ -98,7 +98,11 @@ class _AppShellState extends State<AppShell> {
           ),
           MyPlanScreen(api: widget.auth.api, active: index == 1),
           const AIScreen(),
-          TrackingScreen(api: widget.auth.api, active: index == 3),
+          TrackingScreen(
+            api: widget.auth.api,
+            active: index == 3,
+            userId: widget.auth.user!.id,
+          ),
           MyAdvisorsScreen(api: widget.auth.api, active: index == 4),
         ],
       ),

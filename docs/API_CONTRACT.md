@@ -31,7 +31,13 @@ Mobil için `GET /api/users/me/advisors`, `/workout-plans`, `/nutrition-goals/ac
 
 Web'in danışan listesi/detayı, Admin kullanıcı listesi ve danışman ilişkisi yönetimi, egzersiz kataloğu yönetimi, Trainer program oluşturma/listeleme ve Dietitian hedef oluşturma/listeleme endpointleri de uygulanmıştır. Mevcut `AdvisorService`, `WorkoutService`, `NutritionService` ve `AddMobileAssignmentReads` tabloları kullanılır; bu adım yeni migration oluşturmaz. Gerçek web oturumlarında atamalar PostgreSQL'e kaydedilir ve mevcut mobil okuma endpointlerinden görülebilir.
 
-Bağlı danışana görev/not ekleme ve görev durumunu güncelleme uygulanmıştır. Web formuna Danışan Detayı → Görevler / Notlar yolundan ulaşılır; mobil kullanıcı Planım → Görevler üzerinden kendi görevini tamamlar. Kendi profilini güncelleme, rol değiştirme, program düzenleme ve antrenman oturumu endpointleri henüz uygulanmamıştır. Admin egzersiz yönetimi web ekranı katalog listeleme, oluşturma, düzenleme ve aktif/pasif durum yönetimini içerir. Admin danışman ilişkisi web yönetimi ayrı bir adımdır. Test hesapları yalnız geçici PostgreSQL fixture'ında hazırlanır; uygulama başlangıcında örnek veri/hesap eklenmez.
+Bağlı danışana görev/not ekleme ve görev durumunu güncelleme uygulanmıştır. Web formuna Danışan Detayı → Görevler / Notlar yolundan ulaşılır; mobil kullanıcı Planım → Görevler üzerinden kendi görevini tamamlar.
+
+Admin, Kullanıcılar → kullanıcı profili → Danışmanları yönet ekranından mevcut sözleşmeyle danışman atayabilir, ilişkiyi sonlandırabilir ve geçmişi görebilir.
+
+Admin egzersiz yönetimi web ekranı katalog listeleme, oluşturma, düzenleme ve aktif/pasif durum yönetimini içerir.
+
+Kendi profilini güncelleme, rol değiştirme, program düzenleme ve antrenman oturumu endpointleri henüz uygulanmamıştır. Test hesapları yalnız geçici PostgreSQL fixture'ında hazırlanır; uygulama başlangıcında örnek veri/hesap eklenmez.
 
 Base path:
 
@@ -1639,7 +1645,9 @@ Toplamlar PostgreSQL'de yalnız token sahibinin `[from, to)` kayıtları üzerin
 
 # 21. RUNNING ACTIVITY ENDPOINTLERİ
 
-İlk sürümde GPS takibi mobilde yapılabilir ve tamamlanan aktivite backend'e gönderilebilir.
+V1 GPS takibi Flutter'da uygulama ön plandayken yapılır. Tamamlanan koşu ASP.NET Core üzerinden PostgreSQL'e kaydedilir. Uygulama arka plana geçtiğinde takip duraklar; arka plan konum servisi bu sürümde yoktur.
+
+21.1–21.3 uygulanmıştır. Yetki: JWT + `User` rolü. Kullanıcı kimliği token'dan alınır; başka kullanıcıya erişim yoktur. Yanıtlar `Cache-Control: no-store` kullanır.
 
 ## 21.1 Koşu Kaydı Oluştur
 
@@ -1651,23 +1659,53 @@ Request:
 
 ```json
 {
+  "id": "ea6b9c55-b276-4df8-bf97-268efbce7498",
   "startedAt": "2026-11-05T06:00:00Z",
-  "endedAt": "2026-11-05T06:31:42Z",
-  "durationSeconds": 1902,
-  "distanceMeters": 5240,
-  "averagePaceSecondsPerKm": 363,
-  "averageSpeedKmh": 9.92,
-  "estimatedCalories": 410,
+  "endedAt": "2026-11-05T06:00:30Z",
+  "durationSeconds": 20,
   "routeData": {
-    "type": "polyline",
-    "value": "encoded-polyline-data"
+    "type": "gps-segments",
+    "segments": [
+      [
+        {"latitude": 41.0, "longitude": 29.0, "accuracyMeters": 5, "recordedAt": "2026-11-05T06:00:00Z"},
+        {"latitude": 41.0001, "longitude": 29.0, "accuracyMeters": 5, "recordedAt": "2026-11-05T06:00:10Z"}
+      ]
+    ]
   }
 }
 ```
 
-Not:
+Request DTO: `CreateRunningActivityRequest`; rota DTO'ları: `RunningRouteData`, `RunningRoutePoint`.
 
-`routeData` formatı Flutter harita/GPS implementasyonu kesinleştiğinde netleştirilebilir.
+- `id`: mobilin koşu başında ürettiği boş olmayan UUID; yeniden denemelerde aynı ID ve payload kullanılır. İlk kayıt **201 Created**, aynı kullanıcı/ID/içerik tekrarı **200 OK** ve mevcut kayıt. ID farklı içerik veya kullanıcıya aitse **409 Conflict**. Eşzamanlı tekrar da tek satır oluşturur.
+- `startedAt/endedAt`: offset içeren ISO 8601 tarih/saat, gelecekte olamaz; UTC saklanır. `durationSeconds`: duraklamalar hariç aktif süre, 1–86400; başlangıç/bitiş aralığını aşamaz.
+- `routeData.type` kesin olarak `gps-segments`. En az bir boş olmayan segment, toplam en fazla 20000 nokta, en fazla 4 MB request. Noktalar null olamaz. Latitude [-90,90], longitude [-180,180], accuracyMeters [0,35]; alanlar zorunludur. Nokta zamanları koşu aralığında ve bütün segmentler boyunca kesin artan sıradadır.
+- Segment içi ardışık noktalar en fazla 15 saniye aralıklı ve en fazla 12 m/sn hıza karşılık gelmelidir. Duraklama/GPS boşluğundan sonraki ilk nokta yeni segment başlatır. Segmentler arası mesafe eklenmez.
+- Mesafe backend'de GPS noktalarından Haversine (6378137 m yarıçap) ile hesaplanıp 2 ondalığa yuvarlanır. Ortalama hız: metre × 3.6 / aktif saniye; pace: aktif saniye × 1000 / metre. Sıfır mesafede pace `null`, hız 0. Hız/pace 2 ondalıktır. Türetilen metrikler request'ten kabul edilmez. V1 `estimatedCalories: null` döner; kalori tahmini yapılmaz.
+- Doğrulama hatası **400 ValidationProblemDetails**, anonim/geçersiz oturum **401**, User rolü yoksa **403**. Bilinmeyen request alanları (ör. `userId`, `distanceMeters`) reddedilir.
+
+Başarı DTO: `RunningActivityResponse`; 201'de Location koşu detayını gösterir:
+
+```json
+{
+  "id": "ea6b9c55-b276-4df8-bf97-268efbce7498",
+  "startedAt": "2026-11-05T06:00:00Z",
+  "endedAt": "2026-11-05T06:00:30Z",
+  "durationSeconds": 20,
+  "distanceMeters": 11.13,
+  "averagePaceSecondsPerKm": 1796.95,
+  "averageSpeedKmh": 2.00,
+  "estimatedCalories": null,
+  "routeData": {
+    "type": "gps-segments",
+    "segments": [[
+      {"latitude": 41.0, "longitude": 29.0, "accuracyMeters": 5, "recordedAt": "2026-11-05T06:00:00Z"},
+      {"latitude": 41.0001, "longitude": 29.0, "accuracyMeters": 5, "recordedAt": "2026-11-05T06:00:10Z"}
+    ]]
+  },
+  "createdAt": "2026-11-05T06:00:31Z"
+}
+```
 
 ---
 
@@ -1677,6 +1715,8 @@ Not:
 GET /api/users/me/running-activities
 ```
 
+**200 OK**: `RunningActivitySummaryResponse[]`. Yukarıdaki yanıtın `routeData` hariç alanlarını döndürür; rota yalnız detayda yüklenir. `startedAt` azalan, eşitlikte `id` artan sırada kullanıcının kendi geçmişi. Veri yoksa `[]`. Başka kullanıcı seçme parametresi yoktur.
+
 ---
 
 ## 21.3 Koşu Detayı
@@ -1685,9 +1725,13 @@ GET /api/users/me/running-activities
 GET /api/running-activities/{runningActivityId}
 ```
 
+**200 OK**: rota dahil `RunningActivityResponse`. Kayıt yoksa veya başka kullanıcıya aitse **404 ProblemDetails**; anonim **401**, User rolü yoksa **403**.
+
 ---
 
 ## 21.4 Danışanın Koşu Geçmişini Gör
+
+Planlanan sözleşme; bu kişisel koşu takibi görevinde uygulanmadı.
 
 ```http
 GET /api/users/{userId}/running-activities

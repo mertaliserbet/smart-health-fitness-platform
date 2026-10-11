@@ -129,6 +129,25 @@ Shell içindeki `IndexedStack` sekme içeriklerini ve kaydırma konumlarını ko
 
 ## Kontroller
 
+### Takip > Koşu (V1)
+
+Kesin konum izni ve açık GPS ile **Koşuyu Başlat → Başlat → Duraklat / Devam Et → Bitir**.
+Mesafe gerçek GPS noktalarından, pace (saniye/km) ve ortalama hız aktif süreden hesaplanır. Duraklama süre/mesafeye eklenmez; rota çizimi duraklama/GPS boşluğu segmentlerini bağlamaz, harita servis anahtarı gerekmez.
+
+Takip yalnız uygulama ön plandayken çalışır; arka plan/ekran kapanmasında duraklar. Zayıf/eski konum ve belirgin sıçrama mesafeye eklenmez; 45 saniye güvenilir konum yoksa duraklar. Canlı, henüz bitirilmemiş koşu bellektedir; uygulamayı zorla kapatma koşuyu kurtarmaz. Kalori tahmini yapılmaz.
+
+Bitir sonrası özet önce kullanıcı ve API adresine özel güvenli cihaz deposuna, sonra backend'e kaydedilir. Ağ hatasında **Kaydı Tekrar Dene** veya yeniden açılışta **Kaydedilmemiş Koşuyu Aç** kullanılır; aynı koşu kimliği çift kayıt oluşmasını önler. Cihaz deposu okunamıyorsa önce hata çözülmelidir; eski kayıt üzerine yeni koşu yazılmaz. Backend kapalıyken GPS takibi yapılabilir; tamamlanmış koşu çevrimiçi olunca gönderilir.
+
+Windows'ta Docker Desktop ve Android emülatörü açıkken repository kökünde:
+
+```powershell
+./mobile/tool/auth_smoke.ps1 -RunningTest
+```
+
+Bu kontrol ayrı geçici PostgreSQL/API kullanır ve yalnız emülatöre ADB ile test koordinatları verir; uygulama gerçek Android konum servisi ve HTTP kullanır. Üretim uygulamasında test rotası/mesafesi yoktur. Fiziksel telefonda açık alanda konum izni, GPS kapat/aç, duraklat/devam, ekran kapatma ve ağ hatası/yeniden gönderme ayrıca kontrol edilmelidir.
+
+Emülatörde eski GPS konumu, bağlantı kaybı veya Android sistem servisi çökmesi görülürse Device Manager'dan **Cold Boot Now** ile soğuk açılış yapın; kullanıcı verisini silmek gerekmez. Bu görevde Android 16 emülatöründeki GPS testi soğuk açılış sonrası başarıyla doğrulandı.
+
 Planım/Rehberim testleri Bearer header, yerel hedef tarihi, salt okunur program detayı, birden fazla danışman, görev/not kaynaklarının bağımsızlığı, boş yanıt, eksik servis, tekrar deneme, bozuk yanıt, eski veriyi koruma, detay ekranında oturum sona ermesi ve dar/yatay/geniş ekranlarda büyük metin davranışını kapsar.
 
 Dashboard widget testleri `/me` karşılamasını, boş kartları, modül API çağrılmamasını, kartlardan sekmelere geçişi, kaydırma konumunun korunmasını ve dar/yatay/geniş ekranlarda yerleşimi kapsar.

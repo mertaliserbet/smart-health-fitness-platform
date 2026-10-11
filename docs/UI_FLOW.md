@@ -66,8 +66,8 @@ Resmi proje adı **Yapay Zekâ Destekli Sağlık ve Fitness Platformu**; reposit
 | Beslenme geçmişi / günlük durum | Öğünleri tarihe göre listeler; günlük kalori/makroyu yalnızca geçerli tek aktif hedefle karşılaştırır; manuel kayıt ekler. | Manuel öğün ekle, AI > Yemek fotoğrafı, Beslenme hedefi, Takip | `GET /api/users/me/nutrition-records?date=...`, `GET /api/users/me/nutrition-goals/active?date=YYYY-MM-DD` |
 | Manuel öğün ekle | Öğün türü, ad, porsiyon, kalori ve makroları girip kaydeder. | Beslenme geçmişi | `POST /api/users/me/nutrition-records` (`sourceType: Manual`) |
 | Koşu geçmişi | Kaydedilmiş koşuları listeler; yeni koşu başlatır. | Canlı koşu, Koşu detayı, Takip | `GET /api/users/me/running-activities` |
-| Canlı koşu | Konum izniyle GPS rotası, süre, mesafe ve hızı izler; koşuyu bitirip özeti onaylar. | Koşu özeti, Koşu geçmişi | Yerel konum/GPS; biten kayıt için `POST /api/users/me/running-activities` |
-| Koşu özeti / detayı | Rota, mesafe, süre, tempo, ortalama hız ve tahmini kaloriyi gösterir. | Koşu geçmişi, Takip | `GET /api/running-activities/{runningActivityId}`; kaydetme yanıtı ayrıntısı henüz belirtilmemiş |
+| Canlı koşu | Kesin konum izniyle GPS rotası, aktif süre, mesafe, pace ve ortalama hızı izler; başlat/duraklat/devam/bitir. | Koşu özeti, Koşu geçmişi | Yerel GPS; biten kayıt için `POST /api/users/me/running-activities` |
+| Koşu özeti / detayı | Gerçek rota, mesafe, aktif süre, pace ve ortalama hızı gösterir; kalori tahmini V1'de yoktur. | Koşu geçmişi, Takip | `GET /api/running-activities/{runningActivityId}`; kayıt/detay yanıtı API sözleşmesi 21. bölümünde |
 | Günlük aktivite / sağlık verileri | Flutter'ın kullanıcı izniyle Health Connect/HealthKit'ten okuyup API'ye gönderdiği adım, kalori, nabız ve diğer desteklenen verileri gösterir. | Sağlık bağlantısı ayarları, Takip | Health Connect/HealthKit → Flutter → ASP.NET Core API → PostgreSQL; `GET /api/users/me/activity-records`, `GET /api/users/me/health-data-records`; izin sonrası ilgili `POST` yolları |
 
 ### 2.6 Rehberim
@@ -117,7 +117,7 @@ Resmi proje adı **Yapay Zekâ Destekli Sağlık ve Fitness Platformu**; reposit
 8. **Kilo / vücut ölçümü ekleme:** Takip → Kilo veya Ölçümler → Ekle → değer ve kayıt zamanı → ilgili `POST /api/users/me/weight-records` veya `/body-measurements` → liste/grafik yenilenir; yetkili danışman Danışan Detayı'nda görür.
 9. **Yemek fotoğrafından AI analizi:** AI → Yemek fotoğrafı → Flutter kamera/galeri → ASP.NET Core API → Python FastAPI → AI Model → backend üzerinden Flutter'a tahmin → kullanıcı porsiyon/kalori/makroları düzeltip onaylar → `POST /api/users/me/nutrition-records` (`sourceType: AI`, `foodRecognitionLogId`) → Takip > Beslenme geçmişi güncellenir. İptalde `NutritionRecord` oluşmaz; AI tahmini kesin beslenme verisi olarak sunulmaz.
 10. **Spor ekipmanı AI analizi:** AI → Ekipman fotoğrafı → Flutter → ASP.NET Core API → Python FastAPI → AI ekipman tahmini → backend `GymEquipment.ModelKey` ve `EquipmentExercise` ile egzersizleri eşler → Flutter sonuç ekranı → Egzersiz detayı. Flutter FastAPI'ye doğrudan bağlanmaz.
-11. **GPS koşu takibi:** Takip → Koşu geçmişi → Koşuyu başlat → yerel konum izni → canlı süre/rota/mesafe → Bitir → özet onayı → `POST /api/users/me/running-activities` → Koşu geçmişi/detayı. İzin reddinde takip başlamaz; kaydetme başarısızlığında veri kaybını önleme davranışı netleştirilmeli.
+11. **GPS koşu takibi:** Takip → Koşu geçmişi → Koşuyu başlat → kesin konum izni/GPS kontrolü → Başlat → canlı süre/rota/mesafe → Duraklat/Devam → Bitir → tamamlanmış özeti güvenli cihaz deposuna yazma → `POST /api/users/me/running-activities` → başarı özeti → geçmiş/detay. Duraklama süre ve mesafeye eklenmez; devam/GPS boşluğu yeni rota segmentidir. V1 takip ön plandadır, arka planda otomatik duraklar. Zayıf/eski konum ve GPS sıçraması mesafeye eklenmez; 45 saniye güvenilir konum yoksa duraklar. İzin reddi/GPS kapalı durumunda ayarlara git/tekrar dene gösterilir. Ağ hatasında tamamlanmış özet kullanıcı/API adresine özel güvenli depoda korunur; yeniden açılışta aynı ID ile tekrar gönderilir ve çift kayıt oluşmaz. Devam eden koşu zorla kapanmada kurtarılmaz.
 12. **Health Connect / HealthKit verilerini görüntüleme:** Profil > Sağlık bağlantısı → kullanıcıdan işletim sistemi izni → Health Connect / HealthKit → Flutter okur → ASP.NET Core API'ye `POST /api/users/me/activity-records` ve/veya `POST /api/users/me/health-data-records/batch` → PostgreSQL → Takip'te ilgili `GET` istekleriyle gösterilir. Sağlık platformu backend'e doğrudan bağlanmaz.
 
 ## 5. V1 kararlarından sonra kalan açık noktalar
@@ -129,7 +129,6 @@ Resmi ad, `UserAdvisor` aktivasyonu, `WorkoutDay.Weekday`, tek aktif `NutritionG
 | Danışman detayı | `GET /api/users/me/advisors` kısa profil verir; tam `AdvisorProfile.Biography` ve görev/notların `advisorId` ile ayrılması için yanıt yapısı henüz tanımlı değil. V1 ekranı mevcut kısa profille başlayabilir. |
 | Antrenman oturumu | Yarım kalan `WorkoutSession` için devam/iptal ve tek oturum detayı yanıtı tanımlı değil. Bugünkü gün seçimi ise `Weekday` ile kesinleşti. |
 | Sağlık senkronizasyonu ve ayarlar | İzin cihazda alınır; tekrar gönderilen örnekleri ayıklama, senkronizasyon sıklığı ve bildirim tercihinin saklanması tanımlı değil. |
-| GPS koşusu | `RunningActivity.RouteData` nihai biçimi, başarısız kaydı kurtarma ve zayıf GPS davranışı henüz tanımlı değil. |
 
 ## 6. Geliştirme referansı
 

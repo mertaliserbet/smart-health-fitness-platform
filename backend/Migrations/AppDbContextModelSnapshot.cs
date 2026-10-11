@@ -490,6 +490,72 @@ namespace SmartHealthFitness.Api.Migrations
                         });
                 });
 
+            modelBuilder.Entity("SmartHealthFitness.Api.Entities.RunningActivity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<decimal?>("AveragePaceSecondsPerKm")
+                        .HasPrecision(14, 2)
+                        .HasColumnType("numeric(14,2)")
+                        .HasColumnName("average_pace_seconds_per_km");
+
+                    b.Property<decimal>("AverageSpeedKmh")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("average_speed_kmh");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<decimal>("DistanceMeters")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("distance_meters");
+
+                    b.Property<int>("DurationSeconds")
+                        .HasColumnType("integer")
+                        .HasColumnName("duration_seconds");
+
+                    b.Property<DateTime>("EndedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ended_at");
+
+                    b.Property<decimal?>("EstimatedCalories")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("estimated_calories");
+
+                    b.Property<string>("RouteData")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("route_data");
+
+                    b.Property<DateTime>("StartedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("started_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_running_activities");
+
+                    b.HasIndex("UserId", "StartedAt")
+                        .HasDatabaseName("ix_running_activities_user_id_started_at");
+
+                    b.ToTable("running_activities", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_running_activities_time", "ended_at >= started_at AND duration_seconds > 0 AND duration_seconds <= 86400");
+
+                            t.HasCheckConstraint("ck_running_activities_values", "distance_meters >= 0 AND average_speed_kmh >= 0 AND (average_pace_seconds_per_km IS NULL OR average_pace_seconds_per_km >= 0)");
+                        });
+                });
+
             modelBuilder.Entity("SmartHealthFitness.Api.Entities.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -992,6 +1058,17 @@ namespace SmartHealthFitness.Api.Migrations
                 });
 
             modelBuilder.Entity("SmartHealthFitness.Api.Entities.RefreshToken", b =>
+                {
+                    b.HasOne("SmartHealthFitness.Api.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("SmartHealthFitness.Api.Entities.RunningActivity", b =>
                 {
                     b.HasOne("SmartHealthFitness.Api.Entities.User", "User")
                         .WithMany()
