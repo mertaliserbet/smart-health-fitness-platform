@@ -1,7 +1,7 @@
 # Yapay Zekâ Destekli Sağlık ve Fitness Platformu — Mobil
 
 Flutter Android/iOS temeli; kayıt, giriş, oturum kontrolü/yenileme ve çıkış.
-Giriş sonrası ana uygulama beş alt menüden oluşur: **Ana Sayfa, Planım, AI, Takip, Rehberim**. Ana Sayfa kart tabanlı dashboard gösterir; Takip'te gerçek kilo ve vücut ölçümü kayıtları kullanılır. Planım ve Rehberim sözleşmedeki API yollarına HTTP isteği gönderir; AI şimdilik placeholder içeriktir. Profil/Ayarlar Ana Sayfa'nın sağ üst profil düğmesinden açılır; mevcut hesap adı/e-postası ve çıkış işlemi burada bulunur.
+Giriş sonrası ana uygulama beş alt menüden oluşur: **Ana Sayfa, Planım, AI, Takip, Rehberim**. Ana Sayfa kart tabanlı dashboard gösterir; Takip'te gerçek kilo, vücut ölçümü ve manuel beslenme kayıtları kullanılır. Planım ve Rehberim sözleşmedeki API yollarına HTTP isteği gönderir; AI şimdilik placeholder içeriktir. Profil/Ayarlar Ana Sayfa'nın sağ üst profil düğmesinden açılır; mevcut hesap adı/e-postası ve çıkış işlemi burada bulunur.
 
 Ana Sayfa'daki karşılama doğrulanmış `/api/users/me` verisinden, tarih cihazın yerel takviminden gelir. Bugünkü antrenman, kalori/makro, günlük aktivite, kilo gelişimi ve koç/diyetisyen kartları hazırlanmıştır. Dashboard endpointi henüz uygulanmadığından Ana Sayfa'daki özetler açık boş durum mesajları ve sayısal değer yerine `—` gösterir; örnek kullanıcı verisi, sıfır hedef, yüzde veya grafik üretilmez. Ana Sayfa modül API çağrısı yapmaz. Kart butonları mevcut Planım, Takip veya Rehberim sekmesini açar; gerçek kilo özeti Takip'tedir.
 
@@ -11,7 +11,15 @@ Ana Sayfa'daki karşılama doğrulanmış `/api/users/me` verisinden, tarih ciha
 - **Kilo Ekle** / **Ölçüm Ekle** ayrı form açar. Ölçüm alanlarının hepsi zorunlu değildir; en az biri girilir. Kilo/çevre ölçümleri 0,01–1000, yağ yüzdesi 0–100; en fazla iki ondalık basamak. Virgül ve nokta kabul edilir.
 - Tarih ve saat seçilebilir; gelecekteki zaman reddedilir. İstek UTC gönderilir, geçmiş cihazın yerel saatinde gösterilir. Başarılı kayıt sonrası gerçek listeler yeniden yüklenir.
 - Veri yoksa boş durum; ağ/API hatasında görünür hata ve **Tekrar dene**. Önceki kayıtlar varsa yenileme hatasında korunur ve eski oldukları belirtilir. Listeyi aşağı çekerek yenileyebilirsin.
-- Kaydetme sırasında yinelenen gönderim engellenir; alan hataları ve form girdileri korunur. Logout/oturum sona ermesi açık formu da kaldırır. Beslenme, koşu ve sağlık entegrasyonları bu ekranın kapsamında değildir.
+- Kaydetme sırasında yinelenen gönderim engellenir; alan hataları ve form girdileri korunur. Logout/oturum sona ermesi açık formu da kaldırır. Koşu ve sağlık entegrasyonları henüz yoktur.
+
+## Takip → Beslenme: manuel kalori ve makro takibi
+
+- **Beslenme** düğmesi günlük özet ve tüm günlerdeki kayıt geçmişini açar. Öğün/besin adı, öğün türü, isteğe bağlı porsiyon, kalori ve üç makro manuel girilir; tüm sayısal alanlar zorunludur, sıfır geçerlidir. Virgül/nokta ve en fazla iki ondalık basamak desteklenir.
+- Seçilen günün gerçek toplamları mevcut, tarih aralığı geçerli aktif `NutritionGoal` ile karşılaştırılır. Kalan/aşılan değerler gösterilir; hedef yoksa hedef uydurulmaz. Gün seçilebilir; tüketim zamanı formda değiştirilebilir, gelecekte olamaz.
+- Tüketim UTC gönderilir; özet için yerel günün gece yarısı sınırları offsetleriyle API'ye gönderilir. Geçmiş yerel saatle gösterilir. Kayıt sonrası API yeniden okunur; loading/empty/error/yeniden deneme ve oturum sona ermesi desteklenir.
+- `AddManualNutritionRecords` migration'ı gerekir. `baslat.cmd` başlangıçta migration'ları uygular; ayrı backend çalıştırırken backend README'deki EF `database update` adımını kullanın.
+- API/DB/Android kontrolü repository kökünden: `./mobile/tool/auth_smoke.ps1 -NutritionTest`. Docker Desktop ve `emulator-5554` açık olmalıdır; fixture ayrı geçici PostgreSQL kullanır ve sonunda silinir. Beslenme kayıtlarını gerçek Flutter formları oluşturur; aktif hedef mevcut Dietitian endpointi ile atanır. Uygulama başlangıcında test verisi eklenmez.
 
 ## Planım ve Rehberim: gerçek backend okumaları
 

@@ -3,7 +3,8 @@ param(
     [ValidateRange(1024, 65535)] [int] $ApiPort = 5061,
     [ValidateRange(1024, 65535)] [int] $DatabasePort = 55433,
     [switch] $AssignmentTest,
-    [switch] $AssignmentWriteTest
+    [switch] $AssignmentWriteTest,
+    [switch] $NutritionTest
 )
 
 $ErrorActionPreference = 'Stop'
@@ -65,7 +66,34 @@ try {
     }
     if (-not $ready) { throw 'Test API health check failed.' }
 
-    if ($AssignmentTest -or $AssignmentWriteTest) {
+    if ($NutritionTest) {
+        # The user creates every NutritionRecord through Flutter; only advisor prerequisites are seeded.
+        $nutritionIds = @{}
+        foreach ($account in @('user', 'other', 'dietitian')) {
+            $body = @{ firstName='İrem'; lastName='Şerbet'; email="nutrition-$account@example.test"; password='Nutrition-Test-Password123!' }
+            $registered = Invoke-RestMethod "http://127.0.0.1:$ApiPort/api/auth/register" -Method Post `
+                -ContentType 'application/json; charset=utf-8' -Body ($body | ConvertTo-Json -Compress)
+            $nutritionIds[$account] = ([Guid]::Parse($registered.id)).ToString()
+        }
+        $dietitianId=$nutritionIds.dietitian; $nutritionUserId=$nutritionIds.user
+        $fixtureSql = "DELETE FROM user_roles WHERE user_id='$dietitianId'; INSERT INTO user_roles (id,user_id,role_id) SELECT gen_random_uuid(),'$dietitianId'::uuid,id FROM roles WHERE name='Dietitian'; INSERT INTO user_advisors (id,user_id,advisor_id,advisor_type,start_date,status,created_at) VALUES (gen_random_uuid(),'$nutritionUserId','$dietitianId','Dietitian','2026-01-01','Active',now());"
+        & docker compose -f $composeFile -p $fixtureName exec -T postgres psql -U mobile_auth_check -d mobile_auth_check -v ON_ERROR_STOP=1 -c $fixtureSql
+        if ($LASTEXITCODE -ne 0) { throw 'Nutrition advisor fixture failed.' }
+        $loginBody=@{email='nutrition-dietitian@example.test';password='Nutrition-Test-Password123!'} | ConvertTo-Json -Compress
+        $dietitianLogin=Invoke-RestMethod "http://127.0.0.1:$ApiPort/api/auth/login" -Method Post -ContentType 'application/json' -Body $loginBody
+        $goalBody=@{dailyCalories=2000;proteinGrams=100;carbohydrateGrams=250;fatGrams=70;waterMl=2500;startDate='2026-01-01';endDate=$null} | ConvertTo-Json -Compress
+        [void] (Invoke-RestMethod "http://127.0.0.1:$ApiPort/api/users/$nutritionUserId/nutrition-goals" -Method Post `
+            -Headers @{Authorization="Bearer $($dietitianLogin.accessToken)"} -ContentType 'application/json' -Body $goalBody)
+        Set-Location (Join-Path $repositoryRoot 'mobile')
+        flutter test integration_test/nutrition_flow_test.dart -d $Device `
+            "--dart-define=API_BASE_URL=http://10.0.2.2:$ApiPort" --dart-define=NUTRITION_TEST_FIXTURE=true
+        if ($LASTEXITCODE -ne 0) { throw 'Android nutrition integration test failed.' }
+        $stored = & docker compose -f $composeFile -p $fixtureName exec -T postgres psql -U mobile_auth_check -d mobile_auth_check -At -c `
+            "SELECT count(*)::text || ':' || sum(calories)::text || ':' || sum(protein_grams)::text FROM nutrition_records WHERE user_id='$nutritionUserId';"
+        if ($LASTEXITCODE -ne 0 -or ($stored -join '').Trim() -ne '2:1100.50:68.50') { throw 'Android meal totals were not persisted in PostgreSQL.' }
+        Write-Output 'PASS: real Android manual meals -> API -> PostgreSQL -> daily totals/active goal/history; second user isolation.'
+    }
+    elseif ($AssignmentTest -or $AssignmentWriteTest) {
         # Register disposable accounts via the API; seed assignments only in this test database.
         . (Join-Path $repositoryRoot 'backend/tests/AssignmentFixture.ps1')
         function Invoke-CheckSql([string] $Sql) {

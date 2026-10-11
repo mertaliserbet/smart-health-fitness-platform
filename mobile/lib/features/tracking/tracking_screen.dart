@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../core/api_service.dart';
+import '../nutrition/nutrition_screen.dart';
+import '../nutrition/nutrition_service.dart';
 import 'tracking_entry_screen.dart';
 import 'tracking_models.dart';
 import 'tracking_service.dart';
@@ -101,6 +103,18 @@ class _TrackingScreenState extends State<TrackingScreen> {
                   const SizedBox(height: 8),
                   const Text('Kayıtlarını ekle, geçmişini takip et.'),
                   const SizedBox(height: 20),
+                  OutlinedButton.icon(
+                    onPressed: () => Navigator.of(context).push<void>(
+                      MaterialPageRoute(
+                        builder: (_) => NutritionScreen(
+                          service: NutritionService(widget.api),
+                        ),
+                      ),
+                    ),
+                    icon: const Icon(Icons.restaurant_outlined),
+                    label: const Text('Beslenme'),
+                  ),
+                  const SizedBox(height: 16),
                   if (_loading) ...[
                     const LinearProgressIndicator(),
                     const SizedBox(height: 8),

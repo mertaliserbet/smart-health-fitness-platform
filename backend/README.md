@@ -2,6 +2,16 @@
 
 **Yapay Zekâ Destekli Sağlık ve Fitness Platformu** için tek ASP.NET Core Web API projesi.
 
+## Manuel beslenme kayıtları
+
+`AddManualNutritionRecords` yalnız `nutrition_records` tablosunu ekler. Mevcut `NutritionService`/`NutritionGoal` kullanılır; yeni hedef entity'si veya AI tablosu yoktur.
+
+- `POST /api/users/me/nutrition-records`: manuel öğün ekleme.
+- `GET /api/users/me/nutrition-records`: kendi geçmişini listeleme; tarih/aralık/öğün filtresi.
+- `GET /api/users/me/nutrition-records/daily-summary`: kendi günlük kalori/makro toplamları ve geçerli aktif hedef.
+
+Üç endpoint de JWT + `User` rolü ister. Sahiplik token'dan alınır; validation ve gün sınırları `docs/API_CONTRACT.md` 20. bölümündedir. Başlatıcı migration'ı uygular; ayrı başlangıçta aşağıdaki EF `database update` komutunu çalıştırın. `./backend/tests/AuthSmoke.ps1` gerçek geçici PostgreSQL'de beslenme, yetki, hedef, gün sınırı ve mevcut auth/atama kontrollerini içerir.
+
 ## Gereksinimler
 
 - .NET 10 SDK
