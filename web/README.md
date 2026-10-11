@@ -33,7 +33,7 @@ Program düzenleme, beslenme kayıtları/ilerleme, profil düzenleme, rol yönet
 
 Varsayılan `/api` istekleri geliştirmede Vite proxy üzerinden `http://localhost:5000` adresine gider. API'yi backend README'sine göre başlatın. Ayrı API adresi için `.env.example` dosyasını `.env.local` adıyla kopyalayıp `VITE_API_BASE_URL` ayarlayın. `VITE_` değişkenleri tarayıcıya açıktır; gizli anahtar eklemeyin.
 
-API sözleşmesi değiştirilmez. Kullanılan istekler:
+İstekler `docs/API_CONTRACT.md` sözleşmesini izler. Kullanılan istekler:
 
 | İşlem                        | Endpoint                                                                 |
 | ---------------------------- | ------------------------------------------------------------------------ |
@@ -48,6 +48,7 @@ API sözleşmesi değiştirilmez. Kullanılan istekler:
 | Egzersiz kataloğu            | `GET /api/exercises`                                                     |
 | Danışanın programları        | `GET /api/users/{userId}/workout-plans`                                  |
 | Program detayı               | `GET /api/workout-plans/{workoutPlanId}`                                 |
+| Aktif programı düzenleme     | `PUT /api/workout-plans/{workoutPlanId}`                                 |
 | Program oluşturma ve atama   | `POST /api/users/{userId}/workout-plans`                                 |
 | Danışanın beslenme hedefleri | `GET /api/users/{userId}/nutrition-goals`                                |
 | Beslenme hedefi atama        | `POST /api/users/{userId}/nutrition-goals`                               |
@@ -60,6 +61,8 @@ Tablodaki endpointler backend'de uygulanmıştır. Danışan listesi yalnız akt
 Danışman yönetimi yalnız `User` rolüne sahip hesaplara açılır. Yeni ilişkinin `startDate` değeri gönderim anındaki UTC takvim günüdür. Kullanıcının kendisi ve aynı kişiyle mevcut aktif ilişki seçimde engellenir; farklı danışmanlar atanabilir. Backend aktif hesap ve rolü tekrar doğrular. Sonlandırmada yalnız `Ended`/`Cancelled` seçilir; bitiş tarihi başlangıçtan önce veya bugünün UTC tarihinden sonra olamaz. Sonlandırma öncesinde sonuçları gösteren bir form açılır; geçmiş kayıtlar silinmez. Hata halinde form korunur, yinelenen gönderim engellenir; `409` halinde güncel ilişki geçmişi tekrar yüklenir. Geçmişteki ilişki yeniden açılmaz; yeni atama ayrı kayıt oluşturur. İlişki listesi yenilenemediğinde atama kapalı kalır.
 
 Program formu mevcut `CreateWorkoutPlanRequest` alanlarıyla POST gönderir; Trainer kimliği request'e eklenmez, backend access token'dan alır. Güncel API `201 WorkoutPlanResponse` JSON yanıtı döner; web daha eski gövdesiz `201` yanıtıyla da çalışabilir. Başarıdan sonra danışanın program listesi yeniden yüklenir; istek hatasında form korunur. Atamadan hemen önce aktif danışan listesi tekrar kontrol edilir. Backend aktif ilişkiyi ve tek aktif program kuralını aynı transaction içinde uygular; pasif egzersizler yeni atamada kullanılamaz. Gün/egzersiz sıra kuralları ve ağırlık alanındaki en fazla iki ondalık basamak hem formda hem backend'de doğrulanır.
+
+Trainer, kendi oluşturduğu aktif programın detayındaki **Programı düzenle** bağlantısıyla aynı formu mevcut gün/hedeflerle açar. `/programlar/:userId/:workoutPlanId/duzenle`, `PUT /api/workout-plans/{id}` kullanır. Mevcut gün/satır kimlikleri korunur; yeni satırlar null kimlikle gönderilir. GET yanıtındaki `updatedAt`, request'in zorunlu `expectedUpdatedAt` alanına aynen aktarılır. Eski sürüm veya pasifleştirilen plan için `409` geldiğinde yeniden gönderim kapatılır ve güncel programa dönüş sunulur. Diğer hatalarda form korunur; başarıda detay API'den tekrar okunur. Geçmiş program ve başka Trainer'ın oluşturduğu program düzenlenmez; backend aynı yetkiyi tekrar denetler. Katalogdaki pasifleşmiş mevcut satır korunabilir, yeni satırlar yalnız aktif katalogdan seçilir. Önizleme düzenlemesi yalnız bellekte tutulur.
 
 Beslenme hedefi formu mevcut sözleşmedeki yedi alanı gönderir; Dietitian kimliğini backend token üzerinden alır. Başarı için sözleşmedeki oluşturulan aktif hedefi içeren JSON yanıtı beklenir; gövdesiz `201` beslenme ataması için başarı sayılmaz. Atamadan önce aktif danışan ilişkisi tekrar kontrol edilir; hata halinde form korunur. Backend yeni hedefi aktif edip önceki hedefi aynı veritabanı işleminde pasifleştirir. Sayı alanları en fazla iki ondalık basamak kabul eder. Su alanı yalnız hedeftir; tüketim verisi gösterilmez.
 

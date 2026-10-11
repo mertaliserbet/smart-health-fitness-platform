@@ -24,6 +24,10 @@ Mesafe GPS segmentlerinden backend'de hesaplanır; pace/hız duraklamalar hariç
 
 `./backend/tests/AuthSmoke.ps1`, aynı geçici PostgreSQL fixture'ında `RunningChecks.ps1` üzerinden metrik/rota, kullanıcı/rol izolasyonu, validation ve eşzamanlı tekrar gönderimini doğrular. Android konum servisi + PostgreSQL kontrolü: `./mobile/tool/auth_smoke.ps1 -RunningTest`.
 
+## Antrenman programı düzenleme
+
+`PUT /api/workout-plans/{workoutPlanId}` uygulanmıştır. Oluşturan Trainer + aktif danışan ilişkisi zorunludur; geçmiş program düzenlenmez. Tam içerik `UpdateWorkoutPlanRequest` ile gönderilir; korunan gün/egzersiz kimlikleri ve GET'ten gelen nullable `updatedAt` sürümü kullanılır. Eski sürüm `409` döner; işlem yeni plan oluşturmaz. Yeni migration yoktur. Ayrıntılar `docs/API_CONTRACT.md` 15.5'tedir. `AuthSmoke.ps1` içindeki `WorkoutPlanEditChecks.ps1`, gerçek PostgreSQL'de yetki, validation/rollback, yedi gün/sıra değişimi, kimliklerin korunması, pasif katalog, eşzamanlı düzenleme ve mobil okumaları doğrular.
+
 ## Gereksinimler
 
 - .NET 10 SDK

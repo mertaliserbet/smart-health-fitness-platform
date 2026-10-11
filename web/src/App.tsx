@@ -12,6 +12,7 @@ import { ExerciseCatalog } from './pages/ExerciseCatalog';
 import { WorkoutPlans } from './pages/WorkoutPlans';
 import { WorkoutPlanCreate } from './pages/WorkoutPlanCreate';
 import { WorkoutPlanDetail } from './pages/WorkoutPlanDetail';
+import { WorkoutPlanEdit } from './pages/WorkoutPlanEdit';
 import { NutritionGoals } from './pages/NutritionGoals';
 import { NutritionGoalCreate } from './pages/NutritionGoalCreate';
 import type { WebRole } from './types/api';
@@ -55,6 +56,10 @@ export function App() {
             <Route path="/programlar/:userId" element={<WorkoutPlans />} />
             <Route path="/programlar/:userId/yeni" element={<WorkoutPlanCreate />} />
             <Route path="/programlar/:userId/:workoutPlanId" element={<WorkoutPlanDetail />} />
+            <Route
+              path="/programlar/:userId/:workoutPlanId/duzenle"
+              element={<WorkoutPlanEdit />}
+            />
             <Route path="/egzersizler" element={<ExerciseCatalog />} />
           </Route>
           <Route element={<RoleRoute allowed={['Dietitian']} />}>
