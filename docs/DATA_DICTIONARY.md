@@ -647,6 +647,19 @@ CreatedAt
 
 `FoodRecognitionLogId` manuel kayıtta `null` olabilir. AI sonucundan kaydedilen öğün, ham tahmin kaydına bu alanla bağlanır; kullanıcının düzelttiği değerler `NutritionRecord` üzerinde tutulur.
 
+Manuel beslenme takibi için uygulanan kurallar:
+
+- `Id`/`UserId`: UUID. Sahip, JWT'deki giriş yapan `User`dır; istemci kullanıcı ID'si seçemez.
+- `Name`: zorunlu, en fazla 200 karakter; baştaki/sondaki boşluklar temizlenir. `PortionDescription`: isteğe bağlı metin.
+- Kalori ve üç makro alanı: zorunlu `decimal`, PostgreSQL `numeric(12,2)`; 0–9999999999.99, en fazla iki ondalık basamak. Sıfır kabul edilir, negatif değerler reddedilir.
+- `ConsumedAt` ve `CreatedAt`: UTC `timestamp with time zone`. Tüketim zamanı zorunludur ve gelecekte olamaz; oluşturma zamanı sunucuda belirlenir.
+- `MealType`: yalnız `Breakfast`, `Lunch`, `Dinner`, `Snack`; veritabanında metin enum ve kontrol kısıtı.
+- Bu aşamada yalnız `SourceType=Manual` ve `FoodRecognitionLogId=null` kabul edilir. AI tablosu oluşturulmaz; nullable sütunda henüz foreign key yoktur. AI akışı uygulanırken manuel kaynak kısıtı ve ham analiz ilişkisi ilgili migration ile güncellenmelidir.
+- `UserId` için `users` foreign key'i vardır; kullanıcı fiziksel olarak silinirse kişisel beslenme kayıtları da silinir. Kayıt silme/düzenleme endpointi bu aşamada yoktur.
+- `(UserId, ConsumedAt)` indeksi kullanıcı/tarih filtrelerini destekler. Liste tüketim zamanı, ardından oluşturma zamanı azalan sıradadır.
+- Günlük özet ayrı tablo/entity değildir; kullanıcının gün aralığındaki kayıtlarından kalori/makro toplamları hesaplanır. Hedef, mevcut tek aktif `NutritionGoal` ve o hedefin tarih aralığı üzerinden okunur. Geçmiş pasif hedefler otomatik olarak seçilmez.
+- Gün sınırları ve saat dilimi davranışı `API_CONTRACT.md` 20.1/20.5'te tanımlıdır; Flutter yerel takvim gününü offset içeren gece yarısı sınırlarıyla gönderir.
+
 `MealType` örnekleri:
 
 ```text

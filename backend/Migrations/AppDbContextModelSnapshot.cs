@@ -323,6 +323,87 @@ namespace SmartHealthFitness.Api.Migrations
                         });
                 });
 
+            modelBuilder.Entity("SmartHealthFitness.Api.Entities.NutritionRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<decimal>("Calories")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("calories");
+
+                    b.Property<decimal>("CarbohydrateGrams")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("carbohydrate_grams");
+
+                    b.Property<DateTime>("ConsumedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("consumed_at");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<decimal>("FatGrams")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("fat_grams");
+
+                    b.Property<Guid?>("FoodRecognitionLogId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("food_recognition_log_id");
+
+                    b.Property<string>("MealType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("meal_type");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("PortionDescription")
+                        .HasColumnType("text")
+                        .HasColumnName("portion_description");
+
+                    b.Property<decimal>("ProteinGrams")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("protein_grams");
+
+                    b.Property<string>("SourceType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("source_type");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_nutrition_records");
+
+                    b.HasIndex("UserId", "ConsumedAt")
+                        .HasDatabaseName("ix_nutrition_records_user_id_consumed_at");
+
+                    b.ToTable("nutrition_records", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_nutrition_records_manual_source", "source_type = 'Manual' AND food_recognition_log_id IS NULL");
+
+                            t.HasCheckConstraint("ck_nutrition_records_meal_type", "meal_type IN ('Breakfast', 'Lunch', 'Dinner', 'Snack')");
+
+                            t.HasCheckConstraint("ck_nutrition_records_values", "calories >= 0 AND protein_grams >= 0 AND carbohydrate_grams >= 0 AND fat_grams >= 0");
+                        });
+                });
+
             modelBuilder.Entity("SmartHealthFitness.Api.Entities.RefreshToken", b =>
                 {
                     b.Property<Guid>("Id")
@@ -895,6 +976,17 @@ namespace SmartHealthFitness.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("Dietitian");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("SmartHealthFitness.Api.Entities.NutritionRecord", b =>
+                {
+                    b.HasOne("SmartHealthFitness.Api.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("User");
                 });

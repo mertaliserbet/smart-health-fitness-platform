@@ -21,6 +21,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<WorkoutDay> WorkoutDays => Set<WorkoutDay>();
     public DbSet<WorkoutExercise> WorkoutExercises => Set<WorkoutExercise>();
     public DbSet<NutritionGoal> NutritionGoals => Set<NutritionGoal>();
+    public DbSet<NutritionRecord> NutritionRecords => Set<NutritionRecord>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

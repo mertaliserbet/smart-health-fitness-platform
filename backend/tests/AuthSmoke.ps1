@@ -240,6 +240,8 @@ try {
     & (Join-Path $PSScriptRoot 'AssignmentChecks.ps1') -FirstToken $roleLogin.Body.accessToken `
         -SecondToken $secondLogin.Body.accessToken -FirstUserId $userId -SecondUserId $secondId
     & (Join-Path $PSScriptRoot 'AdvisorWorkflowChecks.ps1') -OtherUserToken $secondLogin.Body.accessToken -OtherUserId $secondId
+    & (Join-Path $PSScriptRoot 'NutritionChecks.ps1') -FirstToken $roleLogin.Body.accessToken `
+        -SecondToken $secondLogin.Body.accessToken -FirstUserId $userId -SecondUserId $secondId
     $logoutBody = @{ refreshToken = $secondLogin.Body.refreshToken }
     $forbidden = Invoke-Api 'POST' '/api/auth/logout' $logoutBody $roleLogin.Body.accessToken
     Assert-Check ($forbidden.Status -eq 403 -and $forbidden.ContentType -eq 'application/problem+json') 'Cross-user logout must return 403 ProblemDetails.'
@@ -253,10 +255,10 @@ try {
     Assert-Check ((Invoke-Api 'POST' '/api/auth/refresh' @{ refreshToken = $roleLogin.Body.refreshToken }).Status -eq 401) 'Inactive account refresh was accepted.'
     Assert-Check ((Invoke-Api 'GET' '/api/users/me' $null $roleLogin.Body.accessToken).Status -eq 401) 'Inactive account access was accepted.'
     $tables = Invoke-CheckSql "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name NOT LIKE '\_\_%' ORDER BY table_name;"
-    Assert-Check ($tables -eq "advisor_notes`nadvisor_profiles`nbody_measurements`nexercises`nnutrition_goals`nrefresh_tokens`nroles`nuser_advisors`nuser_roles`nuser_tasks`nusers`nweight_records`nworkout_days`nworkout_exercises`nworkout_plans") 'Migration created unexpected domain tables.'
+    Assert-Check ($tables -eq "advisor_notes`nadvisor_profiles`nbody_measurements`nexercises`nnutrition_goals`nnutrition_records`nrefresh_tokens`nroles`nuser_advisors`nuser_roles`nuser_tasks`nusers`nweight_records`nworkout_days`nworkout_exercises`nworkout_plans") 'Migration created unexpected domain tables.'
     Assert-Check ((Invoke-Api 'GET' '/api/users/me/weight-records' $null $roleLogin.Body.accessToken).Status -eq 401) 'Inactive account tracking access was accepted.'
     Assert-Check ((Invoke-Api 'GET' '/api/users/me/advisors' $null $roleLogin.Body.accessToken).Status -eq 401) 'Inactive account assignment access was accepted.'
-    Write-Output 'PASS: inactive accounts are blocked; only auth, tracking and required assignment tables exist.'
+    Write-Output 'PASS: inactive accounts are blocked; only auth, tracking, manual nutrition and required assignment tables exist.'
     docker compose -f $composeFile -p $testName stop postgres
     if ($LASTEXITCODE -ne 0) { throw 'Temporary PostgreSQL could not be stopped for health check.' }
     foreach ($healthToken in @('', $secondLogin.Body.accessToken)) {

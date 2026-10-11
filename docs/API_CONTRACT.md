@@ -1500,9 +1500,33 @@ mealType
 GET /api/users/me/nutrition-records?date=2026-11-05
 ```
 
+**Uygulandı:** JWT ve `User` rolü gerekir. Yalnız token sahibinin kayıtları döner; `userId` query parametresi başka kullanıcıya erişim sağlamaz. Cevap `200 OK`, kayıt yoksa `[]`; `Cache-Control: no-store`.
+
+- `date`: `YYYY-MM-DD` (9999-12-31 hariç). Tek başına UTC gününü filtreler.
+- `from`/`to`: offset veya `Z` içeren ISO 8601 zamanları; başlangıç dahil, bitiş hariç. `from < to` olmalıdır. `date` olmadan sınırlar ayrı ayrı kullanılabilir.
+- `date` ile özel gün sınırı verilirse **iki sınır da** zorunludur: `from` seçili günün, `to` sonraki takvim gününün gece yarısı olmalıdır. Flutter yerel gece yarılarını gerçek saat dilimi offsetleriyle gönderir; yaz/kış saati geçişlerinde offsetler farklı olabilir.
+- `mealType`: `Breakfast`, `Lunch`, `Dinner`, `Snack`. Hatalı tarih, aralık veya öğün `400 ValidationProblemDetails` döndürür.
+- Filtre yoksa tüm geçmiş döner; sıralama `consumedAt DESC`, `createdAt DESC`, `id ASC`.
+
+Yerel gün örneği (query değerleri URL-encode edilmelidir):
+
+```text
+date=2026-11-05
+from=2026-11-05T00:00:00+03:00
+to=2026-11-06T00:00:00+03:00
+```
+
+Liste öğelerinin alanları 20.2'deki kayıt response'u ile aynıdır.
+
 ---
 
 ## 20.2 Manuel Beslenme Kaydı Ekle
+
+**Uygulandı:** JWT + `User` rolü. `userId`, `id`, `createdAt` gibi sözleşme dışı request alanları reddedilir; sahiplik sunucuda token'dan belirlenir.
+
+`name` zorunlu/en fazla 200 karakter; kalori ve üç makro zorunlu, 0–9999999999.99 aralığında ve en fazla iki ondalık basamak. `consumedAt` zorunlu/geçmiş veya şimdi; UTC saklanır. `portionDescription` isteğe bağlıdır. `sourceType` verilmezse `Manual`; başka kaynak ve dolu `foodRecognitionLogId` reddedilir. Hatalar `400 ValidationProblemDetails`; oturumsuz `401`, `User` rolü olmayan `403`.
+
+Başarılı cevap: `201 Created`, `Location: /api/users/me/nutrition-records`, `Cache-Control: no-store`. Response, aşağıdaki request alanlarına ek olarak sunucunun ürettiği `id`, token sahibinin `userId` ve UTC `createdAt` alanlarını içerir. `consumedAt` response'ta UTC'dir.
 
 ```http
 POST /api/users/me/nutrition-records
@@ -1528,6 +1552,8 @@ Request:
 ---
 
 ## 20.3 AI Sonucunu Beslenme Kaydı Olarak Kaydet
+
+**Planlanan akış; henüz uygulanmadı.** Mevcut manuel endpoint `sourceType=AI` veya dolu `foodRecognitionLogId` için `400` döndürür. Aşağıdaki sözleşme AI geliştirmesi için korunur.
 
 Aynı endpoint kullanılır:
 
@@ -1558,6 +1584,8 @@ Kullanıcı analiz sonucunu onaylamadan `NutritionRecord` oluşturulmaz. `foodRe
 
 ## 20.4 Diyetisyenin Danışan Beslenme Kayıtlarını Görmesi
 
+**Planlanan endpoint; manuel kullanıcı takibi kapsamında henüz uygulanmadı.**
+
 ```http
 GET /api/users/{userId}/nutrition-records
 ```
@@ -1567,6 +1595,42 @@ Yetki:
 ```text
 Assigned Dietitian
 ```
+
+---
+
+## 20.5 Kendi Günlük Beslenme Özeti
+
+```http
+GET /api/users/me/nutrition-records/daily-summary?date=2026-11-05
+```
+
+**Uygulandı:** JWT + `User` rolü. `date/from/to` kuralları 20.1 ile aynıdır; tarih verilmezse UTC bugünü kullanılır. Mobil seçili yerel tarih ile iki gece yarısı sınırını birlikte gönderir. `mealType` filtresi bu özet için kullanılmaz; bütün öğünler toplanır.
+
+Response `200 OK`, `Cache-Control: no-store`:
+
+```json
+{
+  "date": "2026-11-05",
+  "recordCount": 1,
+  "consumedCalories": 650,
+  "consumedProteinGrams": 48,
+  "consumedCarbohydrateGrams": 72,
+  "consumedFatGrams": 16,
+  "goal": {
+    "id": "b1077111-e50e-48ba-aebe-f36fc96fd0b3",
+    "dailyCalories": 2200,
+    "proteinGrams": 140,
+    "carbohydrateGrams": 250,
+    "fatGrams": 70,
+    "waterMl": 2500,
+    "isActive": true,
+    "startDate": "2026-11-01",
+    "endDate": null
+  }
+}
+```
+
+Toplamlar PostgreSQL'de yalnız token sahibinin `[from, to)` kayıtları üzerinden hesaplanır. Hedef mevcut `NutritionGoalResponse` ile aynıdır; `IsActive=true` ve `StartDate <= date <= EndDate` (null bitiş sınırsız) şartı aranır. Kayıt yoksa sayı/toplamlar `0`; geçerli aktif hedef yoksa `goal: null`. Bu durumlar hata değildir. Eski pasif hedeflerden tarihsel hedef seçimi yapılmaz. Mobil her değer için `hedef - tüketim` farkını kalan/aşım olarak gösterir; su tüketimi bu görevin kapsamı değildir.
 
 ---
 
@@ -2345,6 +2409,7 @@ GET    /api/users/{userId}/nutrition-goals
 POST   /api/users/{userId}/nutrition-goals
 
 GET    /api/users/me/nutrition-records
+GET    /api/users/me/nutrition-records/daily-summary
 POST   /api/users/me/nutrition-records
 GET    /api/users/{userId}/nutrition-records
 ```
