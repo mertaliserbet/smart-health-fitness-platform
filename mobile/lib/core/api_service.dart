@@ -10,10 +10,12 @@ class ApiException implements Exception {
   const ApiException(
     this.message, {
     this.statusCode,
+    this.code,
     this.fieldErrors = const {},
   });
   final String message;
   final int? statusCode;
+  final String? code;
   final Map<String, String> fieldErrors;
 }
 
@@ -274,7 +276,12 @@ class ApiService {
         _ => 'İşlem tamamlanamadı. Lütfen tekrar deneyin.',
       },
     };
-    return ApiException(message, statusCode: status, fieldErrors: fields);
+    return ApiException(
+      message,
+      statusCode: status,
+      code: json['code'] is String ? json['code'] as String : null,
+      fieldErrors: fields,
+    );
   }
 
   void close() => _client.close();

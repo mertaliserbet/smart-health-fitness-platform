@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../auth/auth_service.dart';
+import '../advisors/my_advisors_screen.dart';
 import '../home/home_screen.dart';
+import '../plans/my_plan_screen.dart';
 import '../profile/profile_screen.dart';
 import '../tracking/tracking_screen.dart';
 import 'section_screens.dart';
@@ -94,10 +96,10 @@ class _AppShellState extends State<AppShell> {
             onOpenTracking: () => _selectedIndex.value = 3,
             onOpenAdvisors: () => _selectedIndex.value = 4,
           ),
-          const MyPlanScreen(),
+          MyPlanScreen(api: widget.auth.api, active: index == 1),
           const AIScreen(),
           TrackingScreen(api: widget.auth.api, active: index == 3),
-          const MyAdvisorsScreen(),
+          MyAdvisorsScreen(api: widget.auth.api, active: index == 4),
         ],
       ),
       bottomNavigationBar: NavigationBar(

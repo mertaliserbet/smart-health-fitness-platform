@@ -1,7 +1,7 @@
 # Yapay Zekâ Destekli Sağlık ve Fitness Platformu — Mobil
 
 Flutter Android/iOS temeli; kayıt, giriş, oturum kontrolü/yenileme ve çıkış.
-Giriş sonrası ana uygulama beş alt menüden oluşur: **Ana Sayfa, Planım, AI, Takip, Rehberim**. Ana Sayfa kart tabanlı dashboard gösterir; Takip'te gerçek kilo ve vücut ölçümü kayıtları kullanılır. Planım, AI ve Rehberim şimdilik sade placeholder içeriktir. Profil/Ayarlar Ana Sayfa'nın sağ üst profil düğmesinden açılır; mevcut hesap adı/e-postası ve çıkış işlemi burada bulunur.
+Giriş sonrası ana uygulama beş alt menüden oluşur: **Ana Sayfa, Planım, AI, Takip, Rehberim**. Ana Sayfa kart tabanlı dashboard gösterir; Takip'te gerçek kilo ve vücut ölçümü kayıtları kullanılır. Planım ve Rehberim sözleşmedeki API yollarına HTTP isteği gönderir; AI şimdilik placeholder içeriktir. Profil/Ayarlar Ana Sayfa'nın sağ üst profil düğmesinden açılır; mevcut hesap adı/e-postası ve çıkış işlemi burada bulunur.
 
 Ana Sayfa'daki karşılama doğrulanmış `/api/users/me` verisinden, tarih cihazın yerel takviminden gelir. Bugünkü antrenman, kalori/makro, günlük aktivite, kilo gelişimi ve koç/diyetisyen kartları hazırlanmıştır. Dashboard endpointi henüz uygulanmadığından Ana Sayfa'daki özetler açık boş durum mesajları ve sayısal değer yerine `—` gösterir; örnek kullanıcı verisi, sıfır hedef, yüzde veya grafik üretilmez. Ana Sayfa modül API çağrısı yapmaz. Kart butonları mevcut Planım, Takip veya Rehberim sekmesini açar; gerçek kilo özeti Takip'tedir.
 
@@ -12,6 +12,19 @@ Ana Sayfa'daki karşılama doğrulanmış `/api/users/me` verisinden, tarih ciha
 - Tarih ve saat seçilebilir; gelecekteki zaman reddedilir. İstek UTC gönderilir, geçmiş cihazın yerel saatinde gösterilir. Başarılı kayıt sonrası gerçek listeler yeniden yüklenir.
 - Veri yoksa boş durum; ağ/API hatasında görünür hata ve **Tekrar dene**. Önceki kayıtlar varsa yenileme hatasında korunur ve eski oldukları belirtilir. Listeyi aşağı çekerek yenileyebilirsin.
 - Kaydetme sırasında yinelenen gönderim engellenir; alan hataları ve form girdileri korunur. Logout/oturum sona ermesi açık formu da kaldırır. Beslenme, koşu ve sağlık entegrasyonları bu ekranın kapsamında değildir.
+
+## Planım ve Rehberim: gerçek backend okumaları
+
+Backend, `AddMobileAssignmentReads` migration'ı ile danışman, program, hedef, görev ve not verilerini kalıcı olarak tutar ve aşağıdaki altı okuma endpointini sunar. Mobil yalnız gerçek HTTP/DB verisini kullanır; kayıt yoksa empty state gösterir. Web'in geliştirme önizlemesindeki örnekler mobilde kullanılmaz. Admin/Trainer/Dietitian atama ve yazma endpointleri henüz uygulanmadı; bu çalışma mobil okumalarını ve bunlar için gereken minimum veri altyapısını içerir.
+
+- **Planım → Antrenman:** atanmış program listesi; Programı Gör ile haftanın günleri, egzersizler, set/tekrar, süre, dinlenme, ağırlık ve notlar. Bu çalışma salt okunurdur; antrenman tamamlama eklenmedi.
+- **Planım → Beslenme:** yerel cihaz tarihiyle geçerli tek aktif kalori/makro/su hedefi. Hedefler tüketim gibi gösterilmez; yüzde veya sahte ilerleme üretilmez.
+- **Planım → Görevler:** görev başlığı, açıklaması, son tarihi ve durumu; ayrı kaynaktan tarihli danışman notları. Görev değiştirme bu çalışmanın kapsamında değildir.
+- **Rehberim:** aktif koç ve diyetisyenler ayrı listelenir; birden fazla danışman desteklenir. Ad/soyad, varsa ünvan ve uzmanlık, atama tarihi gösterilir. API'de bulunmayan fotoğraf, iletişim veya biyografi üretilmez.
+- Kaynaklar ilk ziyaretlerinde yüklenir; **Yenile / Tekrar dene** ile yeniden okunur. Sekme/kaydırma konumu korunur. Bir kaynağın hatası diğerinin verisini gizlemez; yenileme hatasında önceki veriler eski oldukları belirtilerek korunur.
+- `200 []` yanıtı boş durumdur. Beslenmede yalnız `404` + `code: NutritionGoalNotFound` hedef yok anlamına gelir. Genel `404` için **servis henüz hazır değil veya kullanılamıyor** mesajı gösterilir; eksik backend boş atama gibi sunulmaz. Ağ/izin/yanıt hataları görünürdür; mevcut Bearer/refresh/oturum sona ermesi akışı kullanılır.
+
+Migration uygulanmalıdır: `baslat.cmd` mevcut başlatıcısı bunu backend başlangıcında yapar; ayrı çalıştırırken backend README'sindeki `database update` adımını kullanın. Mevcut kullanıcı veritabanına bu çalışmada test ataması eklenmez. Yazma akışları tamamlandığında Admin → Trainer/Dietitian → mobil zinciri ayrıca kontrol edilmelidir. Bu aşamanın gerçek okuma testi, yalnız geçici PostgreSQL fixture'ında hazırlanan kayıtları Android ekranlarında okur; web üzerinden atama testi değildir.
 
 ## Gereksinimler ve çalıştırma
 
@@ -57,9 +70,15 @@ lib/
       dashboard_widgets.dart    Ortak özet kartı ve boş metrik görünümü
     navigation/
       app_shell.dart            Beş alt menü ve korunan profil navigasyonu
-      section_screens.dart      Planım, AI, Rehberim placeholder'ları
+      section_screens.dart      AI placeholder'ı
       section_placeholder.dart  Kaydırılabilir, genişliği sınırlı ortak içerik
     profile/profile_screen.dart Profil/Ayarlar girişi ve mevcut çıkış işlemi
+    assignments/
+      assignment_models.dart    Sözleşmedeki program/hedef/danışman/görev/not alanları
+      assignment_service.dart   Kimliği doğrulanmış okuma istekleri
+      assignment_widgets.dart   Ortak kart, sayfa ve bağımsız yükleme/hata görünümü
+    plans/my_plan_screen.dart   Planım sekmeleri ve salt okunur program detayı
+    advisors/my_advisors_screen.dart Koç/diyetisyen listeleri
     tracking/
       tracking_models.dart      WeightRecord/BodyMeasurement ve gösterim biçimi
       tracking_service.dart     Kimliği doğrulanmış listeleme/ekleme istekleri
@@ -85,6 +104,11 @@ Shell içindeki `IndexedStack` sekme içeriklerini ve kaydırma konumlarını ko
 | Çıkış | `POST /api/auth/logout` |
 | Kilo geçmişi / ekleme | `GET/POST /api/users/me/weight-records` |
 | Ölçüm geçmişi / ekleme | `GET/POST /api/users/me/body-measurements` |
+| Atanmış programlar | `GET /api/users/me/workout-plans` |
+| Program detayı | `GET /api/workout-plans/{workoutPlanId}` |
+| Aktif hedef | `GET /api/users/me/nutrition-goals/active?date=YYYY-MM-DD` |
+| Görevler / notlar | `GET /api/users/me/tasks`, `GET /api/users/me/advisor-notes` |
+| Danışmanlar | `GET /api/users/me/advisors` |
 
 - Kayıt yalnızca `firstName`, `lastName`, `email`, `password` gönderir; rol seçimi yoktur. Başarıda e-posta doldurulmuş Giriş ekranına döner. Register token üretmez.
 - Giriş ve uygulama açılışında `/me` doğrulanmadan Ana Sayfa açılmaz. `User` rolü olmayan hesaplara web panelini kullanma mesajı gösterilir ve mobil oturum kapatılır. Mobil `User`, bu ekranda gereken kimlik/isim/e-posta/rolleri okur; profil düzenleme geliştirilmemiştir.
@@ -96,6 +120,8 @@ Shell içindeki `IndexedStack` sekme içeriklerini ve kaydırma konumlarını ko
 - Alan doğrulaması ve API `ProblemDetails.errors` ilgili inputlarda gösterilir. Bilinen auth hataları Türkçedir; tanınmayan backend alan hatası backend mesajını korur.
 
 ## Kontroller
+
+Planım/Rehberim testleri Bearer header, yerel hedef tarihi, salt okunur program detayı, birden fazla danışman, görev/not kaynaklarının bağımsızlığı, boş yanıt, eksik servis, tekrar deneme, bozuk yanıt, eski veriyi koruma, detay ekranında oturum sona ermesi ve dar/yatay/geniş ekranlarda büyük metin davranışını kapsar.
 
 Dashboard widget testleri `/me` karşılamasını, boş kartları, modül API çağrılmamasını, kartlardan sekmelere geçişi, kaydırma konumunun korunmasını ve dar/yatay/geniş ekranlarda yerleşimi kapsar.
 
@@ -114,9 +140,12 @@ Gerçek Android + API + PostgreSQL testi için Docker Desktop ve mevcut Android 
 
 ```powershell
 ./mobile/tool/auth_smoke.ps1
+./mobile/tool/auth_smoke.ps1 -AssignmentTest
 ```
 
 Varsayılan cihaz `emulator-5554`, API portu `5061`, PostgreSQL portu `55433`; parametrelerle değiştirilebilir. Test adresi Android emülatörünün `10.0.2.2` adresidir; fiziksel cihaz için bu script kullanılmaz.
+
+`-AssignmentTest` ayrı `assignment_flow_test.dart` testini çalıştırır: fixture hesaplarını API ile oluşturur, yalnız geçici PostgreSQL'e program/hedef/görev/not/danışman ilişkisi ekler; Android'de login → Planım/program detayı/hedef/görev/not → Rehberim → logout → ikinci kullanıcı veri izolasyonu akışını doğrular. `ASSIGNMENT_TEST_FIXTURE` yalnız test ortamı kontrolüdür. Sabit test kimlikleri ve test parolası geliştirme/üretim hesabı değildir; uygulama startup'ına seed eklenmez.
 
 Script benzersiz Compose projesi/veritabanı açar, mevcut backend migration'larını yalnızca test veritabanına uygular, rastgele geçici secret kullanır; Flutter cihaz testi bitince kendi API sürecini ve PostgreSQL container/volume/network'ünü kaldırır. Mevcut kullanıcı veritabanına bağlanmaz. Native güvenli depolama, yeni servisle oturum açılışı, tek kullanımlık refresh, `401` kurtarma, gerçek kilo/ölçüm ekleme ve geçmiş, logout iptalini doğrular. Cihaz testinde klavye girdisi Flutter test aracıyla simüle edilir; HTTP ve güvenli depolama gerçek Android ortamını kullanır. `AUTH_TEST_FIXTURE` yalnızca entegrasyon testinin çalıştırma kontrolüdür; üretim özelliği değildir.
 

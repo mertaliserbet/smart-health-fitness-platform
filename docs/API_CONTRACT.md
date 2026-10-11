@@ -25,6 +25,12 @@ Bu dosya aşağıdaki dokümanlarla birlikte değerlendirilmelidir:
 
 # 1. Genel API Kuralları
 
+### Planım / Rehberim uygulama durumu
+
+Mobil için `GET /api/users/me/advisors`, `/workout-plans`, `/nutrition-goals/active`, `/tasks`, `/advisor-notes` ve `GET /api/workout-plans/{workoutPlanId}` uygulanmıştır. `AddMobileAssignmentReads` migration'ı gerekli kalıcı veri altyapısını ekler. Flutter demo/stub veri kullanmadan bu endpointlerden okur. Listelerde kayıt yoksa `200 []`; geçerli aktif hedef yoksa ayırt edici kodla `404` döner.
+
+Bu çalışma yalnız kalıcı veri altyapısı ve okumaları içerir. Admin atama, Trainer program oluşturma, Dietitian hedef oluşturma, görev/not yazma ve web'in diğer endpointleri henüz uygulanmamıştır; ilgili aşağıdaki sözleşmeler uygulanmış API sayılmaz. Test atamaları yalnız geçici PostgreSQL fixture'ında hazırlanır; uygulama başlangıcında örnek veri/hesap eklenmez.
+
 Base path:
 
 ```text
@@ -750,6 +756,20 @@ User: yalnızca kendi notları
 Trainer/Dietitian: yalnızca bağlı danışan
 ```
 
+Response: `200 OK`, `AdvisorNoteResponse[]`. Not yoksa `[]`.
+Her öğe veri sözlüğündeki alanları taşır:
+
+| Alan | Tip |
+|---|---|
+| id, userId, advisorId | UUID string |
+| title, content | string |
+| createdAt | UTC ISO 8601 tarih/saat |
+| updatedAt | UTC ISO 8601 tarih/saat veya null |
+
+Yazar adı bu yanıtta yoktur; mobil yazar ismi üretmez.
+
+Kendi notlarını okuma uygulanmıştır; belirli danışanın notlarını okuma ve not oluşturma henüz uygulanmamıştır. Notlar en yeni `createdAt` önce olacak şekilde sıralanır; danışman ilişkisi sonlandırılsa da kullanıcının geçmiş notları korunur.
+
 ---
 
 ## 12.2 Kullanıcıya Not Ekle
@@ -801,6 +821,20 @@ status
 ```http
 GET /api/users/me/tasks?status=Pending
 ```
+
+Yetki: `User`, yalnızca oturumdaki kullanıcının görevleri. Response: `200 OK`, `UserTaskResponse[]`; kayıt yoksa `[]`. `status` verilmezse tüm durumlar döner.
+
+| Alan | Tip |
+|---|---|
+| id, userId, advisorId | UUID string |
+| title | string |
+| description | string veya null |
+| dueDate | YYYY-MM-DD veya null |
+| status | Pending / InProgress / Completed / Cancelled |
+| completedAt, updatedAt | UTC ISO 8601 tarih/saat veya null |
+| createdAt | UTC ISO 8601 tarih/saat |
+
+Kendi görevlerini okuma uygulanmıştır. `status` büyük/küçük harfe duyarlıdır; bilinmeyen veya sayısal değer `400 ValidationProblemDetails` döner. Görevler en yeni `createdAt` önce olacak şekilde sıralanır. Atama ve durum değiştirme endpointleri henüz uygulanmamıştır.
 
 ---
 
@@ -962,6 +996,8 @@ User
 
 Liste, `isActive`, `startDate` ve `endDate` alanlarını taşır. V1'de kullanıcı başına en fazla bir aktif `WorkoutPlan` bulunur; geçerli tarih aralığı dışındaki plan bugünkü antrenman sayılmaz.
 
+Response: `200 OK`, `WorkoutPlanSummaryResponse[]`. Her öğe `id` (UUID string), `name` (string), `isActive` (bool), `startDate` (YYYY-MM-DD), `endDate` (YYYY-MM-DD veya null) içerir; program atanmamışsa `[]`. Web'de 15.2 için kullanılan özet alanlarıyla aynıdır. Tam gün/egzersiz bilgileri 15.3'ten okunur.
+
 ---
 
 ## 15.2 Danışanın Programlarını Getir
@@ -990,6 +1026,8 @@ Yetki:
 Owner User
 Assigned Trainer
 ```
+
+Bu okuma endpointi uygulanmıştır. `User` yalnız kendi programını okuyabilir. `Trainer` için program sahibine bağlı `Active` Trainer ilişkisi zorunludur; ilişki bitince erişim kalkar. Başka kullanıcının veya bulunamayan programın detayında aynı `404 ProblemDetails` döner; programın varlığı açıklanmaz. Salt `Dietitian`/`Admin` rolü erişim sağlamaz. Günler `dayNumber`, egzersizler `order` artan sırasındadır. Günün `description` ve egzersizin `durationSeconds` alanları da nullable olarak döner; alan adları veri sözlüğü ve mevcut web modelleriyle aynıdır.
 
 Response örneği:
 
@@ -1335,6 +1373,8 @@ GET /api/users/me/nutrition-goals/active
 ```
 
 Opsiyonel `date=YYYY-MM-DD` query parametresi mobil cihazın yerel takvim tarihidir; mobil V1'de gönderir. Parametre yoksa sunucunun UTC takvim tarihi kullanılır. `IsActive = true` olan tek hedefin tarih aralığı bu tarihi kapsıyorsa döner; aksi halde `404 Not Found` döner. Mobil `Planım` ve günlük beslenme ekranı yalnızca bu endpointteki hedefi kullanır.
+
+Yetki: `User`, yalnızca kendi hedefi. Hedef olmadığında `application/problem+json` yanıtında `status: 404` ve `code: "NutritionGoalNotFound"` bulunmalıdır. Mobil yalnızca bu kodlu `404` yanıtını hedef yok olarak gösterir. Genel/boş `404`, yanlış route veya uygulanmamış servis olabileceğinden hata gösterir. Başarılı yanıt `200 OK` olmalıdır.
 
 Response:
 

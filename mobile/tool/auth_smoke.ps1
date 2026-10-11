@@ -1,7 +1,8 @@
 param(
     [string] $Device = 'emulator-5554',
     [ValidateRange(1024, 65535)] [int] $ApiPort = 5061,
-    [ValidateRange(1024, 65535)] [int] $DatabasePort = 55433
+    [ValidateRange(1024, 65535)] [int] $DatabasePort = 55433,
+    [switch] $AssignmentTest
 )
 
 $ErrorActionPreference = 'Stop'
@@ -61,11 +62,41 @@ try {
     }
     if (-not $ready) { throw 'Test API health check failed.' }
 
-    Set-Location (Join-Path $repositoryRoot 'mobile')
-    flutter test integration_test/auth_flow_test.dart -d $Device `
-        "--dart-define=API_BASE_URL=http://10.0.2.2:$ApiPort" --dart-define=AUTH_TEST_FIXTURE=true
-    if ($LASTEXITCODE -ne 0) { throw 'Android auth integration test failed.' }
-    Write-Output 'PASS: mobile auth/session, weight and body measurement creation/history, and logout against PostgreSQL.'
+    if ($AssignmentTest) {
+        # Register disposable accounts via the API; seed assignments only in this test database.
+        . (Join-Path $repositoryRoot 'backend/tests/AssignmentFixture.ps1')
+        function Invoke-CheckSql([string] $Sql) {
+            $result = & docker compose -f $composeFile -p $fixtureName exec -T postgres psql `
+                -U mobile_auth_check -d mobile_auth_check -v ON_ERROR_STOP=1 -At -c $Sql
+            if ($LASTEXITCODE -ne 0) { throw 'Assignment fixture SQL failed.' }
+            return ($result -join "`n").Trim()
+        }
+        $ids = @{}
+        foreach ($account in @('user', 'other', 'trainer', 'dietitian')) {
+            $body = @{ firstName = if ($account -eq 'trainer') { 'Çağrı' } else { 'İrem' }
+                lastName = 'Şerbet'; email = "assignment-$account@example.test"; password = 'Assignment-Test-Password123!' }
+            $registered = Invoke-RestMethod "http://127.0.0.1:$ApiPort/api/auth/register" -Method Post `
+                -ContentType 'application/json; charset=utf-8' -Body ($body | ConvertTo-Json -Compress)
+            $ids[$account] = ([Guid]::Parse($registered.id)).ToString()
+        }
+        foreach ($entry in @(@{account='trainer';role='Trainer'}, @{account='dietitian';role='Dietitian'})) {
+            $id = $ids[$entry.account]; $role = $entry.role
+            [void] (Invoke-CheckSql "DELETE FROM user_roles WHERE user_id = '$id'; INSERT INTO user_roles (id, user_id, role_id) SELECT gen_random_uuid(), '$id'::uuid, id FROM roles WHERE name = '$role';")
+        }
+        Add-AssignmentFixture $ids.user $ids.other $ids.trainer $ids.dietitian
+        Set-Location (Join-Path $repositoryRoot 'mobile')
+        flutter test integration_test/assignment_flow_test.dart -d $Device `
+            "--dart-define=API_BASE_URL=http://10.0.2.2:$ApiPort" --dart-define=ASSIGNMENT_TEST_FIXTURE=true
+        if ($LASTEXITCODE -ne 0) { throw 'Android assignment integration test failed.' }
+        Write-Output 'PASS: real Flutter Planım/Rehberim reads, own-user isolation and logout against PostgreSQL.'
+    }
+    else {
+        Set-Location (Join-Path $repositoryRoot 'mobile')
+        flutter test integration_test/auth_flow_test.dart -d $Device `
+            "--dart-define=API_BASE_URL=http://10.0.2.2:$ApiPort" --dart-define=AUTH_TEST_FIXTURE=true
+        if ($LASTEXITCODE -ne 0) { throw 'Android auth integration test failed.' }
+        Write-Output 'PASS: mobile auth/session, weight and body measurement creation/history, and logout against PostgreSQL.'
+    }
 }
 finally {
     Set-Location $repositoryRoot

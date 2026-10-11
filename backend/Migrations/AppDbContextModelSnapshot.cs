@@ -22,6 +22,107 @@ namespace SmartHealthFitness.Api.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("SmartHealthFitness.Api.Entities.AdvisorNote", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AdvisorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("advisor_id");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("content");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("title");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_advisor_notes");
+
+                    b.HasIndex("AdvisorId");
+
+                    b.HasIndex("UserId", "CreatedAt")
+                        .HasDatabaseName("ix_advisor_notes_user_created");
+
+                    b.ToTable("advisor_notes", (string)null);
+                });
+
+            modelBuilder.Entity("SmartHealthFitness.Api.Entities.AdvisorProfile", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("AdvisorType")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("advisor_type");
+
+                    b.Property<string>("Biography")
+                        .HasColumnType("text")
+                        .HasColumnName("biography");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("Specialization")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("specialization");
+
+                    b.Property<string>("Title")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("title");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_advisor_profiles");
+
+                    b.HasIndex("UserId", "AdvisorType")
+                        .IsUnique()
+                        .HasDatabaseName("ux_advisor_profiles_user_id_advisor_type");
+
+                    b.ToTable("advisor_profiles", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_advisor_profiles_type", "advisor_type IN ('Trainer', 'Dietitian')");
+                        });
+                });
+
             modelBuilder.Entity("SmartHealthFitness.Api.Entities.BodyMeasurement", b =>
                 {
                     b.Property<Guid>("Id")
@@ -92,6 +193,133 @@ namespace SmartHealthFitness.Api.Migrations
                             t.HasCheckConstraint("ck_body_measurements_thigh_cm", "thigh_cm IS NULL OR (thigh_cm > 0 AND thigh_cm <= 1000)");
 
                             t.HasCheckConstraint("ck_body_measurements_waist_cm", "waist_cm IS NULL OR (waist_cm > 0 AND waist_cm <= 1000)");
+                        });
+                });
+
+            modelBuilder.Entity("SmartHealthFitness.Api.Entities.Exercise", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text")
+                        .HasColumnName("description");
+
+                    b.Property<string>("ImageUrl")
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)")
+                        .HasColumnName("image_url");
+
+                    b.Property<string>("Instructions")
+                        .HasColumnType("text")
+                        .HasColumnName("instructions");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("name");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<string>("VideoUrl")
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)")
+                        .HasColumnName("video_url");
+
+                    b.HasKey("Id")
+                        .HasName("pk_exercises");
+
+                    b.ToTable("exercises", (string)null);
+                });
+
+            modelBuilder.Entity("SmartHealthFitness.Api.Entities.NutritionGoal", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<decimal>("CarbohydrateGrams")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("carbohydrate_grams");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<decimal>("DailyCalories")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("daily_calories");
+
+                    b.Property<Guid>("DietitianId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("dietitian_id");
+
+                    b.Property<DateOnly?>("EndDate")
+                        .HasColumnType("date")
+                        .HasColumnName("end_date");
+
+                    b.Property<decimal>("FatGrams")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("fat_grams");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<decimal>("ProteinGrams")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("protein_grams");
+
+                    b.Property<DateOnly>("StartDate")
+                        .HasColumnType("date")
+                        .HasColumnName("start_date");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<decimal>("WaterMl")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("water_ml");
+
+                    b.HasKey("Id")
+                        .HasName("pk_nutrition_goals");
+
+                    b.HasIndex("DietitianId");
+
+                    b.HasIndex("UserId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_nutrition_goals_active_user")
+                        .HasFilter("is_active");
+
+                    b.ToTable("nutrition_goals", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_nutrition_goals_dates", "end_date IS NULL OR end_date >= start_date");
+
+                            t.HasCheckConstraint("ck_nutrition_goals_targets", "daily_calories >= 0 AND protein_grams >= 0 AND carbohydrate_grams >= 0 AND fat_grams >= 0 AND water_ml >= 0");
                         });
                 });
 
@@ -253,6 +481,65 @@ namespace SmartHealthFitness.Api.Migrations
                     b.ToTable("users", (string)null);
                 });
 
+            modelBuilder.Entity("SmartHealthFitness.Api.Entities.UserAdvisor", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AdvisorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("advisor_id");
+
+                    b.Property<string>("AdvisorType")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("advisor_type");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateOnly?>("EndDate")
+                        .HasColumnType("date")
+                        .HasColumnName("end_date");
+
+                    b.Property<DateOnly>("StartDate")
+                        .HasColumnType("date")
+                        .HasColumnName("start_date");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_user_advisors");
+
+                    b.HasIndex("AdvisorId");
+
+                    b.HasIndex("UserId", "AdvisorId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_user_advisors_active_user_advisor")
+                        .HasFilter("status = 'Active'");
+
+                    b.ToTable("user_advisors", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_user_advisors_different_users", "user_id <> advisor_id");
+
+                            t.HasCheckConstraint("ck_user_advisors_status_dates", "(status = 'Active' AND end_date IS NULL) OR (status IN ('Ended', 'Cancelled') AND end_date >= start_date AND end_date IS NOT NULL)");
+
+                            t.HasCheckConstraint("ck_user_advisors_type", "advisor_type IN ('Trainer', 'Dietitian')");
+                        });
+                });
+
             modelBuilder.Entity("SmartHealthFitness.Api.Entities.UserRole", b =>
                 {
                     b.Property<Guid>("Id")
@@ -278,6 +565,67 @@ namespace SmartHealthFitness.Api.Migrations
                         .HasDatabaseName("ux_user_roles_user_id_role_id");
 
                     b.ToTable("user_roles", (string)null);
+                });
+
+            modelBuilder.Entity("SmartHealthFitness.Api.Entities.UserTask", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AdvisorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("advisor_id");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("completed_at");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text")
+                        .HasColumnName("description");
+
+                    b.Property<DateOnly?>("DueDate")
+                        .HasColumnType("date")
+                        .HasColumnName("due_date");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("status");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("title");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_user_tasks");
+
+                    b.HasIndex("AdvisorId");
+
+                    b.HasIndex("UserId", "CreatedAt")
+                        .HasDatabaseName("ix_user_tasks_user_created");
+
+                    b.ToTable("user_tasks", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_user_tasks_status", "status IN ('Pending', 'InProgress', 'Completed', 'Cancelled')");
+                        });
                 });
 
             modelBuilder.Entity("SmartHealthFitness.Api.Entities.WeightRecord", b =>
@@ -316,6 +664,211 @@ namespace SmartHealthFitness.Api.Migrations
                         });
                 });
 
+            modelBuilder.Entity("SmartHealthFitness.Api.Entities.WorkoutDay", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int>("DayNumber")
+                        .HasColumnType("integer")
+                        .HasColumnName("day_number");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text")
+                        .HasColumnName("description");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("Weekday")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("weekday");
+
+                    b.Property<Guid>("WorkoutPlanId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("workout_plan_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_workout_days");
+
+                    b.HasIndex("WorkoutPlanId", "DayNumber")
+                        .IsUnique()
+                        .HasDatabaseName("ux_workout_days_plan_number");
+
+                    b.HasIndex("WorkoutPlanId", "Weekday")
+                        .IsUnique()
+                        .HasDatabaseName("ux_workout_days_plan_weekday");
+
+                    b.ToTable("workout_days", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_workout_days_number", "day_number > 0");
+
+                            t.HasCheckConstraint("ck_workout_days_weekday", "weekday IN ('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday')");
+                        });
+                });
+
+            modelBuilder.Entity("SmartHealthFitness.Api.Entities.WorkoutExercise", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int?>("DurationSeconds")
+                        .HasColumnType("integer")
+                        .HasColumnName("duration_seconds");
+
+                    b.Property<Guid>("ExerciseId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("exercise_id");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("text")
+                        .HasColumnName("notes");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("integer")
+                        .HasColumnName("order");
+
+                    b.Property<int?>("Reps")
+                        .HasColumnType("integer")
+                        .HasColumnName("reps");
+
+                    b.Property<int?>("RestSeconds")
+                        .HasColumnType("integer")
+                        .HasColumnName("rest_seconds");
+
+                    b.Property<int?>("Sets")
+                        .HasColumnType("integer")
+                        .HasColumnName("sets");
+
+                    b.Property<decimal?>("WeightKg")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)")
+                        .HasColumnName("weight_kg");
+
+                    b.Property<Guid>("WorkoutDayId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("workout_day_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_workout_exercises");
+
+                    b.HasIndex("ExerciseId");
+
+                    b.HasIndex("WorkoutDayId", "Order")
+                        .IsUnique()
+                        .HasDatabaseName("ux_workout_exercises_day_order");
+
+                    b.ToTable("workout_exercises", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_workout_exercises_order", "\"order\" > 0");
+
+                            t.HasCheckConstraint("ck_workout_exercises_targets", "(sets IS NULL OR sets > 0) AND (reps IS NULL OR reps > 0) AND (duration_seconds IS NULL OR duration_seconds > 0) AND (rest_seconds IS NULL OR rest_seconds >= 0) AND (weight_kg IS NULL OR weight_kg >= 0)");
+                        });
+                });
+
+            modelBuilder.Entity("SmartHealthFitness.Api.Entities.WorkoutPlan", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text")
+                        .HasColumnName("description");
+
+                    b.Property<DateOnly?>("EndDate")
+                        .HasColumnType("date")
+                        .HasColumnName("end_date");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("name");
+
+                    b.Property<DateOnly>("StartDate")
+                        .HasColumnType("date")
+                        .HasColumnName("start_date");
+
+                    b.Property<Guid>("TrainerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("trainer_id");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_workout_plans");
+
+                    b.HasIndex("TrainerId");
+
+                    b.HasIndex("UserId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_workout_plans_active_user")
+                        .HasFilter("is_active");
+
+                    b.HasIndex("UserId", "StartDate")
+                        .HasDatabaseName("ix_workout_plans_user_start");
+
+                    b.ToTable("workout_plans", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_workout_plans_dates", "end_date IS NULL OR end_date >= start_date");
+                        });
+                });
+
+            modelBuilder.Entity("SmartHealthFitness.Api.Entities.AdvisorNote", b =>
+                {
+                    b.HasOne("SmartHealthFitness.Api.Entities.User", "Advisor")
+                        .WithMany()
+                        .HasForeignKey("AdvisorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SmartHealthFitness.Api.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Advisor");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("SmartHealthFitness.Api.Entities.AdvisorProfile", b =>
+                {
+                    b.HasOne("SmartHealthFitness.Api.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("SmartHealthFitness.Api.Entities.BodyMeasurement", b =>
                 {
                     b.HasOne("SmartHealthFitness.Api.Entities.User", "User")
@@ -327,6 +880,25 @@ namespace SmartHealthFitness.Api.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("SmartHealthFitness.Api.Entities.NutritionGoal", b =>
+                {
+                    b.HasOne("SmartHealthFitness.Api.Entities.User", "Dietitian")
+                        .WithMany()
+                        .HasForeignKey("DietitianId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SmartHealthFitness.Api.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Dietitian");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("SmartHealthFitness.Api.Entities.RefreshToken", b =>
                 {
                     b.HasOne("SmartHealthFitness.Api.Entities.User", "User")
@@ -334,6 +906,25 @@ namespace SmartHealthFitness.Api.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("SmartHealthFitness.Api.Entities.UserAdvisor", b =>
+                {
+                    b.HasOne("SmartHealthFitness.Api.Entities.User", "Advisor")
+                        .WithMany()
+                        .HasForeignKey("AdvisorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SmartHealthFitness.Api.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Advisor");
 
                     b.Navigation("User");
                 });
@@ -357,6 +948,25 @@ namespace SmartHealthFitness.Api.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("SmartHealthFitness.Api.Entities.UserTask", b =>
+                {
+                    b.HasOne("SmartHealthFitness.Api.Entities.User", "Advisor")
+                        .WithMany()
+                        .HasForeignKey("AdvisorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SmartHealthFitness.Api.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Advisor");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("SmartHealthFitness.Api.Entities.WeightRecord", b =>
                 {
                     b.HasOne("SmartHealthFitness.Api.Entities.User", "User")
@@ -368,9 +978,68 @@ namespace SmartHealthFitness.Api.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("SmartHealthFitness.Api.Entities.WorkoutDay", b =>
+                {
+                    b.HasOne("SmartHealthFitness.Api.Entities.WorkoutPlan", "WorkoutPlan")
+                        .WithMany("Days")
+                        .HasForeignKey("WorkoutPlanId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("WorkoutPlan");
+                });
+
+            modelBuilder.Entity("SmartHealthFitness.Api.Entities.WorkoutExercise", b =>
+                {
+                    b.HasOne("SmartHealthFitness.Api.Entities.Exercise", "Exercise")
+                        .WithMany()
+                        .HasForeignKey("ExerciseId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SmartHealthFitness.Api.Entities.WorkoutDay", "WorkoutDay")
+                        .WithMany("Exercises")
+                        .HasForeignKey("WorkoutDayId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Exercise");
+
+                    b.Navigation("WorkoutDay");
+                });
+
+            modelBuilder.Entity("SmartHealthFitness.Api.Entities.WorkoutPlan", b =>
+                {
+                    b.HasOne("SmartHealthFitness.Api.Entities.User", "Trainer")
+                        .WithMany()
+                        .HasForeignKey("TrainerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SmartHealthFitness.Api.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Trainer");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("SmartHealthFitness.Api.Entities.User", b =>
                 {
                     b.Navigation("UserRoles");
+                });
+
+            modelBuilder.Entity("SmartHealthFitness.Api.Entities.WorkoutDay", b =>
+                {
+                    b.Navigation("Exercises");
+                });
+
+            modelBuilder.Entity("SmartHealthFitness.Api.Entities.WorkoutPlan", b =>
+                {
+                    b.Navigation("Days");
                 });
 #pragma warning restore 612, 618
         }

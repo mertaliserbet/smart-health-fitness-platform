@@ -140,7 +140,7 @@ Swagger'da register ile hesap oluşturun (`firstName`, `lastName`, `email`, `pas
 
 `InitialUserAuthentication` yalnızca `users`, `roles`, `user_roles`, `refresh_tokens` tablolarını oluşturur. Dört rol eklenir; hiçbir admin/trainer/dietitian kullanıcı hesabı seed edilmez. User profil alanları nullable olarak hazırdır; profil düzenleme endpointi bu aşamada yoktur.
 
-`AddWeightRecordsAndBodyMeasurements` yalnızca `weight_records` ve `body_measurements` tablolarını ekler. Kayıtlar JWT'deki kullanıcıya aittir; `userId` request'ten seçilemez. Sayı aralıkları ve boş ölçüm kuralları API validation ve PostgreSQL check constraint'leriyle korunur. UTC tarihleri ve kullanıcı/tarih indeksleri kullanılır. İki endpoint grubunun sözleşmesi `API_CONTRACT.md` bölüm 17–18'de bulunur. Danışman okuma endpointleri bu aşamada uygulanmamıştır.
+`AddWeightRecordsAndBodyMeasurements` yalnızca `weight_records` ve `body_measurements` tablolarını ekler. Kayıtlar JWT'deki kullanıcıya aittir; `userId` request'ten seçilemez. Sayı aralıkları ve boş ölçüm kuralları API validation ve PostgreSQL check constraint'leriyle korunur. UTC tarihleri ve kullanıcı/tarih indeksleri kullanılır. İki endpoint grubunun sözleşmesi `API_CONTRACT.md` bölüm 17–18'de bulunur. Danışmanların başka kullanıcıların kilo/ölçümlerini okuma endpointleri bu aşamada uygulanmamıştır.
 
 Migration uygulama başlangıcında otomatik çalışmaz; yukarıdaki `database update` komutuyla uygulanır. EF migration oluşturmak için JWT secret gerekmez, ancak veritabanı connection string configuration'ı gerekir. Model ile migration uyumunu kontrol etmek için:
 
@@ -156,6 +156,23 @@ Repository kökünde (Windows PowerShell veya PowerShell 7, çalışan Docker De
 
 Script restore/build yapar, rastgele geçici credential kullanır, ayrı bir PostgreSQL Compose projesine migration uygular ve API'yi gizli bir işlem olarak başlatır. Register → login → me → refresh, role seçimi reddi, aynı email/eşzamanlı kayıt, JWT imza/süre/issuer/audience, refresh süre/tek kullanım/eşzamanlılık, hash saklama, logout sahipliği, pasif kullanıcı ve health kontrollerini yapar. Aynı fixture içindeki `TrackingChecks.ps1`, kilo/ölçüm ekleme ve sıralı geçmişi, sayı/tarih validation'ını, kısmi ölçümleri, rol kontrolünü ve iki kullanıcı arasında veri izolasyonunu test eder. Kendi geçici container/volume/process'ini sonunda temizler; geliştirme veritabanına bağlanmaz. Test portları `5059` ve `55432`; doluysa `-ApiPort` ve `-DatabasePort` parametrelerini kullanın. Güncel build zaten varsa `-NoBuild` verilebilir.
 
-Bu aşamada Advisor, Workout, Nutrition, Running, AI veya Health tabloları yoktur. Ek mimari katman veya repository abstraction eklenmemiştir. Mevcut `baslat.cmd` başlatıcısı backend'i açarken migration'ları uygular; ayrı çalıştırırken yukarıdaki `database update` adımı gereklidir.
+`AddMobileAssignmentReads`, mobil Planım/Rehberim okumaları için `advisor_profiles`, `user_advisors`, `advisor_notes`, `user_tasks`, `exercises`, `workout_plans`, `workout_days`, `workout_exercises`, `nutrition_goals` tablolarını ekler. Domain/alan isimleri veri sözlüğünü kullanır; fake veri/hesap seed edilmez. Running, AI veya Health tablosu eklenmez. Ek mimari katman veya repository abstraction eklenmemiştir. Mevcut `baslat.cmd` başlatıcısı backend'i açarken migration'ları uygular; ayrı çalıştırırken yukarıdaki `database update` adımı gereklidir.
+
+### Planım / Rehberim okuma endpointleri
+
+| Endpoint | Başarı / boş yanıt | Yetki |
+|---|---|---|
+| `GET /api/users/me/advisors` | `200` aktif koç/diyetisyen listesi, yoksa `[]` | User, kendi atamaları |
+| `GET /api/users/me/workout-plans` | `200` aktif ve geçmiş programlar, yoksa `[]` | User, kendi programları |
+| `GET /api/workout-plans/{workoutPlanId}` | `200` sıralı gün/egzersiz detayı; bulunamayan/yetkisiz kayıt `404` | Owner User veya Active Assigned Trainer |
+| `GET /api/users/me/nutrition-goals/active?date=YYYY-MM-DD` | `200` geçerli aktif hedef; yoksa `404` + `code: NutritionGoalNotFound` | User, kendi hedefi |
+| `GET /api/users/me/tasks?status=Pending` | `200` görevler, yoksa `[]`; geçersiz status `400` | User, kendi görevleri |
+| `GET /api/users/me/advisor-notes` | `200` tarihli notlar, yoksa `[]` | User, kendi notları |
+
+Tüm yanıtlar `no-store` kullanır. Kullanıcı kimliği JWT `sub` claim'inden alınır; query ile `userId` seçilemez. Beslenme hedefinde cihazın takvim tarihi gönderilir; tarih yoksa UTC gün kullanılır, sınırlar dahildir. Tek aktif program/hedef ve tek haftanın günü DB indeksleriyle korunur.
+
+Admin atama, Trainer program oluşturma, Dietitian hedef oluşturma ve görev/not yazma endpointleri bu çalışmada eklenmedi. Web'in yazma akışları bunları bekler; bu okuma altyapısı mevcut web demo verisini gerçek atamaya dönüştürmez. Yeni servisler `AdvisorService`, `WorkoutService`, `NutritionService`; paylaşılan DTO'lar `Contracts/AssignmentContracts.cs` içindedir.
+
+`AuthSmoke.ps1`, `AssignmentChecks.ps1` ile gerçek PostgreSQL'de boş/atanmış kullanıcıyı, DTO/enum/tarih biçimlerini, sahiplik/rol ve biten danışman ilişkisi erişimini, beslenme hedefi geçerlilik sınırlarını, validation ve DB benzersiz indekslerini de test eder. `AssignmentFixture.ps1` yalnız geçici veritabanına test atamaları ekler. İlerideki yazma servisleri bu entity'leri kullanmalı, alternatif tablo/model oluşturmamalıdır.
 
 Kullanılan framework bileşenleri: [JWT bearer authentication](https://learn.microsoft.com/en-us/aspnet/core/security/authentication/configure-jwt-bearer-authentication?view=aspnetcore-10.0), [ASP.NET Core password hashing](https://learn.microsoft.com/en-us/aspnet/core/security/data-protection/consumer-apis/password-hashing?view=aspnetcore-10.0).

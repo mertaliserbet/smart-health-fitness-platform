@@ -26,6 +26,11 @@ Future<AuthService> openApp(
             '/api/users/me' => jsonResponse(userJson),
             '/api/users/me/weight-records' ||
             '/api/users/me/body-measurements' => jsonResponse([]),
+            '/api/users/me/workout-plans' ||
+            '/api/users/me/advisors' ||
+            '/api/users/me/tasks' ||
+            '/api/users/me/advisor-notes' => http.Response('', 404),
+            '/api/users/me/nutrition-goals/active' => http.Response('', 404),
             '/api/auth/login' => jsonResponse({
               ...tokens('login'),
               'user': userJson,
@@ -115,8 +120,10 @@ void main() {
       );
       expect(requests, [
         '/api/users/me',
+        '/api/users/me/workout-plans',
         '/api/users/me/weight-records',
         '/api/users/me/body-measurements',
+        '/api/users/me/advisors',
       ]);
     },
   );
