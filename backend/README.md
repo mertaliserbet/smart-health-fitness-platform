@@ -194,6 +194,7 @@ Tüm yanıtlar `no-store` kullanır. Kullanıcı kimliği JWT `sub` claim'inden 
 | `POST /api/user-advisors` | `201` oluşturulan ilişki | Admin |
 | `PATCH /api/user-advisors/{userAdvisorId}` | `200` sonlandırılan ilişki | Admin |
 | `GET /api/exercises` | `200` aktif katalog | Bearer JWT |
+| `GET /api/exercises?includeInactive=true` | `200 ExerciseDetailResponse[]`, aktif/pasif kayıtlar ve `isActive` | Admin; diğer roller `403` |
 | `GET /api/exercises/{exerciseId}` | `200` detay | Bearer JWT; pasif kayıt yalnız Admin |
 | `POST /api/exercises`, `PUT /api/exercises/{exerciseId}` | `201` / `200` detay | Admin |
 | `GET/POST /api/users/{userId}/workout-plans` | `200` liste / `201` program JSON + Location | Atanmış Trainer |

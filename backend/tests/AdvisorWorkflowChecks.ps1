@@ -102,6 +102,21 @@ Assert-Check ($exercise.Status -eq 201 -and $exercise.Body.instructions -eq $exe
 $exerciseId = $exercise.Body.id
 $catalog = Invoke-Api 'GET' '/api/exercises?search=workflow' $null $trainer.Token
 Assert-Check ($catalog.Status -eq 200 -and $catalog.NoStore -and $catalog.Body.Count -eq 1 -and $catalog.Body[0].id -eq $exerciseId) 'Real exercise catalog mismatch.'
+Assert-Check (-not ($catalog.Body[0].PSObject.Properties.Name -contains 'isActive')) 'Default catalog response contract changed.'
+Assert-Check ((Invoke-Api 'GET' '/api/exercises?includeInactive=true').Status -eq 401) 'Anonymous managed catalog exposed.'
+foreach ($account in @($trainer, $dietitian, $clientUser)) {
+    Assert-Check ((Invoke-Api 'GET' '/api/exercises?includeInactive=true' $null $account.Token).Status -eq 403) 'Non-admin can read managed catalog.'
+    Assert-Check ((Invoke-Api 'PUT' ('/api/exercises/' + $exerciseId) $exerciseRequest $account.Token).Status -eq 403) 'Non-admin can update an exercise.'
+}
+Assert-Check ((Invoke-Api 'GET' '/api/exercises?includeInactive=false&search=workflow' $null $trainer.Token).Body[0].id -eq $exerciseId) 'Default active catalog rejected explicit false.'
+Assert-Check ((Invoke-Api 'GET' '/api/exercises?includeInactive=invalid' $null $AdminToken).Status -eq 400) 'Invalid managed catalog query accepted.'
+foreach ($invalidExercise in @(
+    @{ name = ' '; isActive = $true }, @{ name = ('x' * 201); isActive = $true },
+    @{ name = 'Invalid'; videoUrl = 'not-a-url'; isActive = $true },
+    @{ name = 'Invalid'; trainerId = $trainer.Id; isActive = $true }
+)) {
+    Assert-Check ((Invoke-Api 'POST' '/api/exercises' $invalidExercise $AdminToken).Status -eq 400) 'Invalid exercise request accepted.'
+}
 Assert-Check ((Invoke-Api 'GET' ('/api/exercises?muscleGroupId=' + [Guid]::NewGuid()) $null $trainer.Token).Status -eq 400) 'Unsupported muscle-group filter ignored.'
 
 function New-WorkflowPlan {
@@ -149,8 +164,17 @@ Assert-Check ((Invoke-Api 'PUT' ('/api/exercises/' + $exerciseId) $exerciseReque
 Assert-Check ((Invoke-Api 'POST' $workoutPath $planRequest $trainer.Token).Status -eq 400) 'Inactive exercise assigned.'
 Assert-Check ((Invoke-Api 'GET' ('/api/exercises/' + $exerciseId) $null $trainer.Token).Status -eq 404) 'Inactive exercise exposed to trainer catalog.'
 Assert-Check ((Invoke-Api 'GET' ('/api/workout-plans/' + $planId) $null $clientUser.Token).Status -eq 200) 'Exercise deactivation destroyed historical plan.'
+foreach ($token in @($trainer.Token, $clientUser.Token, $AdminToken)) {
+    $activeCatalog = Invoke-Api 'GET' '/api/exercises?search=workflow' $null $token
+    Assert-Check ($activeCatalog.Status -eq 200 -and $activeCatalog.NoStore -and $activeCatalog.Body.Count -eq 0) 'Default catalog exposes a deactivated exercise.'
+}
+$managedCatalog = Invoke-Api 'GET' '/api/exercises?includeInactive=true&search=WORKFLOW' $null $AdminToken
+Assert-Check ($managedCatalog.Status -eq 200 -and $managedCatalog.NoStore -and $managedCatalog.Body.Count -eq 1 -and
+    $managedCatalog.Body[0].id -eq $exerciseId -and $managedCatalog.Body[0].isActive -eq $false -and
+    $managedCatalog.Body[0].instructions -eq $exerciseRequest.instructions) 'Admin cannot find/edit deactivated exercise.'
 $exerciseRequest.isActive = $true
 [void] (Invoke-Api 'PUT' ('/api/exercises/' + $exerciseId) $exerciseRequest $AdminToken)
+Assert-Check ((Invoke-Api 'GET' '/api/exercises?search=workflow' $null $trainer.Token).Body[0].id -eq $exerciseId) 'Reactivated exercise missing from trainer catalog.'
 $timedPlan = New-WorkflowPlan
 $timedPlan.days[0].exercises[0].sets = $null; $timedPlan.days[0].exercises[0].reps = $null
 $timedPlan.days[0].exercises[0].durationSeconds = 60
