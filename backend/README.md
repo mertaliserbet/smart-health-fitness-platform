@@ -24,6 +24,10 @@ Mesafe GPS segmentlerinden backend'de hesaplanır; pace/hız duraklamalar hariç
 
 `./backend/tests/AuthSmoke.ps1`, aynı geçici PostgreSQL fixture'ında `RunningChecks.ps1` üzerinden metrik/rota, kullanıcı/rol izolasyonu, validation ve eşzamanlı tekrar gönderimini doğrular. Android konum servisi + PostgreSQL kontrolü: `./mobile/tool/auth_smoke.ps1 -RunningTest`.
 
+## Antrenman programı düzenleme
+
+`PUT /api/workout-plans/{workoutPlanId}` uygulanmıştır. Oluşturan Trainer + aktif danışan ilişkisi zorunludur; geçmiş program düzenlenmez. Tam içerik `UpdateWorkoutPlanRequest` ile gönderilir; korunan gün/egzersiz kimlikleri ve GET'ten gelen nullable `updatedAt` sürümü kullanılır. Eski sürüm `409` döner; işlem yeni plan oluşturmaz. Yeni migration yoktur. Ayrıntılar `docs/API_CONTRACT.md` 15.5'tedir. `AuthSmoke.ps1` içindeki `WorkoutPlanEditChecks.ps1`, gerçek PostgreSQL'de yetki, validation/rollback, yedi gün/sıra değişimi, kimliklerin korunması, pasif katalog, eşzamanlı düzenleme ve mobil okumaları doğrular.
+
 ## Gereksinimler
 
 - .NET 10 SDK
@@ -219,7 +223,7 @@ Bu endpointler mevcut `AddMobileAssignmentReads` tablolarını kullanır; ek mig
 
 Admin kullanıcı özeti kişisel sağlık alanlarını içermez; Admin'in profil okumasında doğum tarihi, cinsiyet ve boy yalnız aynı hesaba ayrıca aktif danışman ilişkisi varsa döner. Admin ilişki yönetimi `UserAdvisorManagementResponse`, mobil rehber okuması mevcut `UserAdvisorResponse` kullanır. Ayrıntılı request/response sözleşmeleri `docs/API_CONTRACT.md` içindedir.
 
-Trainer/Dietitian/Admin hesabı otomatik oluşturulmaz. Public register yalnız `User` üretir; ilk yetkili hesabın rolü güvenilir geliştirme/dağıtım kurulumu sırasında verilmelidir. Rol yönetimi endpointi ve program düzenleme hâlâ beklemektedir. Web'deki mevcut danışan, program, beslenme ve görev/not atama ekranları gerçek API ile çalışır. Admin, kullanıcı profilindeki Danışmanları yönet ekranından ilişki oluşturabilir, sonlandırabilir ve geçmişi görebilir; katalog yazma işlemleri şimdilik API/Swagger üzerinden yapılır. User kendi bekleyen/devam eden görevini tamamlayabilir; aynı tamamlamanın tekrarı tarihi değiştirmez, bitmiş görev yeniden açılamaz.
+Trainer/Dietitian/Admin hesabı otomatik oluşturulmaz. Public register yalnız `User` üretir; ilk yetkili hesabın rolü güvenilir geliştirme/dağıtım kurulumu sırasında verilmelidir. Rol yönetimi endpointi beklemektedir. Web'deki danışan, program oluşturma/düzenleme, beslenme ve görev/not atama ekranları gerçek API ile çalışır. Admin, kullanıcı profilindeki Danışmanları yönet ekranından ilişki oluşturabilir, sonlandırabilir ve geçmişi görebilir; egzersiz kataloğunu web formundan oluşturup güncelleyebilir. User kendi bekleyen/devam eden görevini tamamlayabilir; aynı tamamlamanın tekrarı tarihi değiştirmez, bitmiş görev yeniden açılamaz.
 
 `AuthSmoke.ps1`, `AssignmentChecks.ps1` ile gerçek PostgreSQL'de boş/atanmış kullanıcıyı, DTO/enum/tarih biçimlerini, sahiplik/rol ve biten danışman ilişkisi erişimini, beslenme hedefi geçerlilik sınırlarını, validation ve DB benzersiz indekslerini de test eder. `AssignmentWriteChecks.ps1` görev/not yazma, mobil okuma ve görev tamamlamanın tekrar gönderilmesini doğrular. `AssignmentFixture.ps1` yalnız geçici veritabanına test atamaları ekler. `AdvisorWorkflowChecks.ps1` aynı geçici ortamda farklı rollerde hesaplar oluşturur; Admin ilişki/katalog yönetimi → Trainer programı → Dietitian hedefi → mobil okuma akışını gerçek HTTP ile doğrular. Alan hataları, sağlık alanlarının Admin'den gizlenmesi, pasif egzersizler, eşzamanlı ilişki/program/hedef atamaları ve sonlanan ilişkide erişimin kesilmesi de kontrol edilir. Test hesapları ve roller yalnız geçici veritabanında tutulur.
 

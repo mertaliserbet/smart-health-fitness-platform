@@ -28,7 +28,7 @@ Adres: http://localhost:5173. Port doluysa Vite başka port seçmez; backend COR
 - Çoklu web rolünde yalnız hesaba atanmış rollerden panel seçimi. `User` hesabı mobil uygulamaya yönlendiren açıklama görür.
 - Responsive koyu arayüz; klavye odağı, görünür alan etiketleri ve yükleniyor/boş/hata durumları.
 
-Program düzenleme, beslenme kayıtları/ilerleme, profil düzenleme, rol yönetimi ve ekipman yönetim formu henüz uygulanmadı. Tamamlanmamış işlemler için işlevsiz düğmeler gösterilmez.
+Beslenme kayıtları/ilerleme, profil düzenleme, rol yönetimi ve ekipman yönetim formu henüz uygulanmadı. Tamamlanmamış işlemler için işlevsiz düğmeler gösterilmez.
 
 ## Gerçek API bağlantısı
 
@@ -52,6 +52,7 @@ Varsayılan `/api` istekleri geliştirmede Vite proxy üzerinden `http://localho
 | Egzersiz oluşturma           | `POST /api/exercises`                                                    |
 | Danışanın programları        | `GET /api/users/{userId}/workout-plans`                                  |
 | Program detayı               | `GET /api/workout-plans/{workoutPlanId}`                                 |
+| Aktif programı düzenleme     | `PUT /api/workout-plans/{workoutPlanId}`                                 |
 | Program oluşturma ve atama   | `POST /api/users/{userId}/workout-plans`                                 |
 | Danışanın beslenme hedefleri | `GET /api/users/{userId}/nutrition-goals`                                |
 | Beslenme hedefi atama        | `POST /api/users/{userId}/nutrition-goals`                               |
@@ -68,6 +69,8 @@ Egzersiz formu POST/PUT işlemlerinde mevcut `CreateExerciseRequest` alanların�
 Admin giriş → egzersiz ekleme → düzenleme/pasifleştirme → yeniden aktifleştirme akışı tarayıcıda ayrı geçici PostgreSQL ile doğrulandı. Kayıtların ve talimatların kalıcılığı, pasif kaydın Trainer kataloğundan çıkarılması, yeniden aktif kaydın geri gelmesi ve Trainer'ın düzenleme URL'sine erişememesi kontrol edildi.
 
 Program formu mevcut `CreateWorkoutPlanRequest` alanlarıyla POST gönderir; Trainer kimliği request'e eklenmez, backend access token'dan alır. Güncel API `201 WorkoutPlanResponse` JSON yanıtı döner; web daha eski gövdesiz `201` yanıtıyla da çalışabilir. Başarıdan sonra danışanın program listesi yeniden yüklenir; istek hatasında form korunur. Atamadan hemen önce aktif danışan listesi tekrar kontrol edilir. Backend aktif ilişkiyi ve tek aktif program kuralını aynı transaction içinde uygular; pasif egzersizler yeni atamada kullanılamaz. Gün/egzersiz sıra kuralları ve ağırlık alanındaki en fazla iki ondalık basamak hem formda hem backend'de doğrulanır.
+
+Trainer, kendi oluşturduğu aktif programın detayındaki **Programı düzenle** bağlantısıyla aynı formu mevcut gün/hedeflerle açar. `/programlar/:userId/:workoutPlanId/duzenle`, `PUT /api/workout-plans/{id}` kullanır. Mevcut gün/satır kimlikleri korunur; yeni satırlar null kimlikle gönderilir. GET yanıtındaki `updatedAt`, request'in zorunlu `expectedUpdatedAt` alanına aynen aktarılır. Eski sürüm veya pasifleştirilen plan için `409` geldiğinde yeniden gönderim kapatılır ve güncel programa dönüş sunulur. Diğer hatalarda form korunur; başarıda detay API'den tekrar okunur. Geçmiş program ve başka Trainer'ın oluşturduğu program düzenlenmez; backend aynı yetkiyi tekrar denetler. Katalogdaki pasifleşmiş mevcut satır korunabilir, yeni satırlar yalnız aktif katalogdan seçilir. Önizleme düzenlemesi yalnız bellekte tutulur.
 
 Beslenme hedefi formu mevcut sözleşmedeki yedi alanı gönderir; Dietitian kimliğini backend token üzerinden alır. Başarı için sözleşmedeki oluşturulan aktif hedefi içeren JSON yanıtı beklenir; gövdesiz `201` beslenme ataması için başarı sayılmaz. Atamadan önce aktif danışan ilişkisi tekrar kontrol edilir; hata halinde form korunur. Backend yeni hedefi aktif edip önceki hedefi aynı veritabanı işleminde pasifleştirir. Sayı alanları en fazla iki ondalık basamak kabul eder. Su alanı yalnız hedeftir; tüketim verisi gösterilmez.
 

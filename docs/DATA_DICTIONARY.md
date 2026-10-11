@@ -413,6 +413,8 @@ UpdatedAt
 
 V1'de bir `User` için aynı anda en fazla bir `IsActive = true` `WorkoutPlan` bulunur. Yeni plan aktif hale getirildiğinde önceki aktif plan pasifleştirilir. Aktif plan yalnızca `StartDate` ve `EndDate` dahil tarih aralığında bugünkü antrenman üretir.
 
+Aktif programı oluşturan ve danışanla aktif Trainer ilişkisi devam eden kişi programı düzenleyebilir. Düzenleme plan/gün/korunan egzersiz kimliklerini ve oluşturma zamanını korur; mevcut `UpdatedAt` alanı eşzamanlı eski ekranın güncel içeriği ezmesini engelleyen sürüm kontrolünde kullanılır. Pasif geçmiş program düzenlenmez. Şema değişikliği yoktur; PUT kuralları `API_CONTRACT.md` 15.5'tedir.
+
 Örnek:
 
 ```text

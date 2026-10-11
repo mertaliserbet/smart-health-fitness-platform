@@ -1,10 +1,11 @@
 import type {
   CreateWorkoutPlanRequest,
+  UpdateWorkoutPlanRequest,
   ExerciseResponse,
   WorkoutPlanResponse,
   WorkoutPlanSummaryResponse,
 } from '../types/workout';
-import { apiRequest } from './apiClient';
+import { apiRequest, ApiError } from './apiClient';
 
 export async function getExercises(demo: boolean, signal?: AbortSignal) {
   if (demo && import.meta.env.DEV) {
@@ -53,4 +54,41 @@ export async function createWorkoutPlan(
     signal,
     allowEmptyResponse: true,
   });
+}
+
+export async function updateWorkoutPlan(
+  id: string,
+  userId: string,
+  request: UpdateWorkoutPlanRequest,
+  demo: boolean,
+  signal?: AbortSignal,
+) {
+  if (demo && import.meta.env.DEV) {
+    const { updateDemoWorkoutPlan } = await import('../demo/demoWorkoutData');
+    if (signal?.aborted) throw new DOMException('İşlem iptal edildi.', 'AbortError');
+    return updateDemoWorkoutPlan(id, request);
+  }
+  const result = await apiRequest<WorkoutPlanResponse>(
+    `/api/workout-plans/${encodeURIComponent(id)}`,
+    {
+      method: 'PUT',
+      body: JSON.stringify(request),
+      signal,
+    },
+  );
+  if (
+    !result ||
+    result.id !== id ||
+    result.userId !== userId ||
+    !result.isActive ||
+    typeof result.updatedAt !== 'string' ||
+    !Number.isFinite(Date.parse(result.updatedAt)) ||
+    result.name !== request.name ||
+    !Array.isArray(result.days) ||
+    !result.days.length
+  )
+    throw new ApiError(502, {
+      detail: 'Güncelleme yanıtı doğrulanamadı. Program detayını açıp sonucu kontrol et.',
+    });
+  return result;
 }

@@ -50,7 +50,7 @@ public sealed class CreateWorkoutDayRequest : IValidatableObject
 }
 
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
-public sealed class CreateWorkoutExerciseRequest : IValidatableObject
+public class CreateWorkoutExerciseRequest : IValidatableObject
 {
     [Required] public Guid? ExerciseId { get; init; }
     [Required, Range(1, int.MaxValue)] public int? Order { get; init; }
@@ -69,4 +69,43 @@ public sealed class CreateWorkoutExerciseRequest : IValidatableObject
         if (DurationSeconds is not null && (Sets is not null || Reps is not null))
             yield return new("Set/tekrar ve süre hedeflerinden birini seçin.", ["durationSeconds"]);
     }
+}
+
+[JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+public sealed class UpdateWorkoutPlanRequest : IValidatableObject
+{
+    // Null is the revision of a newly created plan; omitting the field is an error.
+    [JsonRequired] public DateTimeOffset? ExpectedUpdatedAt { get; init; }
+    [Required, StringLength(200)] public string Name { get; init; } = string.Empty;
+    [StringLength(10000)] public string? Description { get; init; }
+    [Required] public DateOnly? StartDate { get; init; }
+    public DateOnly? EndDate { get; init; }
+    [Required, MinLength(1), MaxLength(7)] public UpdateWorkoutDayRequest[] Days { get; init; } = [];
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext context) =>
+        new CreateWorkoutPlanRequest { StartDate = StartDate, EndDate = EndDate,
+            Days = Days?.Select(day => day?.AsCreateRequest()!).ToArray()! }.Validate(context);
+}
+
+[JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+public sealed class UpdateWorkoutDayRequest : IValidatableObject
+{
+    public Guid? Id { get; init; }
+    [Required, StringLength(200)] public string Name { get; init; } = string.Empty;
+    [Required, Range(1, int.MaxValue)] public int? DayNumber { get; init; }
+    [Required, RegularExpression("^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)$")]
+    public string Weekday { get; init; } = string.Empty;
+    [StringLength(10000)] public string? Description { get; init; }
+    [Required, MinLength(1), MaxLength(100)] public UpdateWorkoutExerciseRequest[] Exercises { get; init; } = [];
+
+    public CreateWorkoutDayRequest AsCreateRequest() => new() { Name = Name, DayNumber = DayNumber,
+        Weekday = Weekday, Description = Description, Exercises = Exercises };
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext context) => AsCreateRequest().Validate(context);
+}
+
+[JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+public sealed class UpdateWorkoutExerciseRequest : CreateWorkoutExerciseRequest
+{
+    public Guid? Id { get; init; }
 }

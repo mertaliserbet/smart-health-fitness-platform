@@ -4,7 +4,11 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, useNavigate } from 'react-router';
 import { App } from './App';
 import { AuthProvider } from './auth/AuthProvider';
-import type { CreateWorkoutPlanRequest } from './types/workout';
+import type {
+  CreateWorkoutPlanRequest,
+  UpdateWorkoutPlanRequest,
+  WorkoutPlanResponse,
+} from './types/workout';
 
 const clientId = '9a97f2b9-2a82-45bd-b7f9-ae24fb73441d';
 const otherClientId = '1ded8474-ebcb-4cb8-ab29-85c56dc53a57';
@@ -61,11 +65,13 @@ function renderApp(path = `/programlar/${clientId}/yeni`) {
 }
 function mockApi({
   post,
+  put,
   roles = ['Trainer'],
   relation = clients,
   detail,
 }: {
   post?: (request: CreateWorkoutPlanRequest) => Promise<Response> | Response;
+  put?: (request: UpdateWorkoutPlanRequest) => Promise<Response> | Response;
   roles?: string[];
   relation?: typeof clients;
   detail?: unknown;
@@ -93,7 +99,12 @@ function mockApi({
           ? post(JSON.parse(String(options.body)))
           : new Response(null, { status: 201 })
         : response([]);
-    if (url === `/api/workout-plans/${planId}`) return response(detail);
+    if (url === `/api/workout-plans/${planId}`)
+      return options?.method === 'PUT'
+        ? put
+          ? put(JSON.parse(String(options.body)))
+          : response({ detail: 'PUT unavailable' }, 500)
+        : response(typeof detail === 'function' ? detail() : detail);
     return response({ detail: 'Endpoint bulunamadı.' }, 404);
   });
   vi.stubGlobal('fetch', fetchMock);
@@ -335,5 +346,271 @@ describe('Trainer program atama akışı', () => {
     expect(screen.queryByLabelText('Program adı')).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Antrenman Programları' })).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Merhaba, Uğur.' })).toBeInTheDocument();
+  });
+});
+
+function editablePlan(): WorkoutPlanResponse {
+  return {
+    id: planId,
+    userId: clientId,
+    trainerId: 'trainer',
+    updatedAt: null,
+    name: 'Mevcut kuvvet programı',
+    description: 'Program notu',
+    startDate: '2026-10-01',
+    endDate: null,
+    isActive: true,
+    days: [
+      {
+        id: 'day-one',
+        name: 'Üst vücut',
+        dayNumber: 1,
+        weekday: 'Monday',
+        description: null,
+        exercises: [
+          {
+            id: 'item-one',
+            exerciseId,
+            exerciseName: 'Bench Press',
+            order: 1,
+            sets: 3,
+            reps: 10,
+            durationSeconds: null,
+            restSeconds: 0,
+            weightKg: 0,
+            notes: null,
+          },
+        ],
+      },
+    ],
+  };
+}
+const editPath = `/programlar/${clientId}/${planId}/duzenle`;
+
+describe('Trainer program düzenleme akışı', () => {
+  it('mevcut değerleri açar; plan/gün/egzersiz kimlikleri ve sürümle PUT gönderir, detayı yeniler', async () => {
+    let plan = editablePlan();
+    let sent: UpdateWorkoutPlanRequest | undefined;
+    const fetchMock = mockApi({
+      detail: () => plan,
+      put: (request) => {
+        sent = request;
+        plan = {
+          ...plan,
+          ...request,
+          updatedAt: '2026-10-11T12:00:00.123456Z',
+          days: plan.days.map((day) => ({
+            ...day,
+            exercises: day.exercises.map((item) => ({ ...item, reps: 12 })),
+          })),
+        };
+        return response(plan);
+      },
+    });
+    renderApp(editPath);
+    const user = await login();
+    expect(await screen.findByLabelText('Program adı')).toHaveValue(plan.name);
+    expect(screen.getByLabelText('Ağırlık (kg, isteğe bağlı) — 1. gün, 1. egzersiz')).toHaveValue(
+      0,
+    );
+    expect(screen.getByLabelText('Bitiş tarihi (isteğe bağlı)')).toHaveValue('');
+    await user.clear(screen.getByLabelText('Tekrar — 1. gün, 1. egzersiz'));
+    await user.type(screen.getByLabelText('Tekrar — 1. gün, 1. egzersiz'), '12');
+    await user.click(screen.getByRole('button', { name: 'Değişiklikleri kaydet' }));
+    await waitFor(() =>
+      expect(screen.getByRole('status')).toHaveTextContent('Program güncellendi'),
+    );
+    expect(screen.getByText('3 set × 12 tekrar · 0 sn dinlenme · 0 kg')).toBeInTheDocument();
+    expect(sent).toMatchObject({
+      expectedUpdatedAt: null,
+      days: [{ id: 'day-one', exercises: [{ id: 'item-one', exerciseId, reps: 12, weightKg: 0 }] }],
+    });
+    expect(sent).not.toHaveProperty('userId');
+    expect(sent).not.toHaveProperty('trainerId');
+    expect(
+      fetchMock.mock.calls.some(
+        ([, options]) =>
+          options?.method === 'POST' && String(options.body).includes('Mevcut kuvvet'),
+      ),
+    ).toBe(false);
+  });
+
+  it('sıralamada kimliği korur; silinen satırı göndermez, yeni egzersize null kimlik verir', async () => {
+    const plan = editablePlan();
+    plan.updatedAt = '2026-10-11T10:00:00.654321Z';
+    plan.days[0].exercises.push({
+      ...plan.days[0].exercises[0],
+      id: 'item-two',
+      order: 2,
+      exerciseName: 'Lat Pulldown',
+      exerciseId: exercises[1].id,
+    });
+    let sent: UpdateWorkoutPlanRequest | undefined;
+    mockApi({
+      detail: plan,
+      put: (request) => {
+        sent = request;
+        return response({ detail: 'Kontrol hatası' }, 500);
+      },
+    });
+    renderApp(editPath);
+    const user = await login();
+    await screen.findByLabelText('Program adı');
+    await user.click(
+      screen.getByRole('button', { name: 'Lat Pulldown, 1. gün, 2. egzersiz, yukarı taşı' }),
+    );
+    await user.click(screen.getByRole('button', { name: 'Bench Press, 1. gün, 2. egzersiz, sil' }));
+    await user.selectOptions(screen.getByLabelText('Egzersiz seç — 1. gün'), exerciseId);
+    await user.click(screen.getByRole('button', { name: 'Egzersizi ekle — 1. gün' }));
+    await user.click(screen.getByRole('button', { name: 'Değişiklikleri kaydet' }));
+    await screen.findByRole('alert');
+    expect(sent).toMatchObject({
+      expectedUpdatedAt: plan.updatedAt,
+      days: [
+        {
+          id: 'day-one',
+          exercises: [
+            { id: 'item-two', exerciseId: exercises[1].id, order: 1 },
+            { id: null, exerciseId, order: 2 },
+          ],
+        },
+      ],
+    });
+    expect(JSON.stringify(sent)).not.toContain('item-one');
+  });
+
+  it('süre hedefi, not ve tarihleri mevcut programdan eksiksiz doldurur', async () => {
+    const plan = editablePlan();
+    plan.endDate = '2026-11-01';
+    plan.days[0].description = 'Gün notu';
+    Object.assign(plan.days[0].exercises[0], {
+      sets: null,
+      reps: null,
+      durationSeconds: 45,
+      weightKg: null,
+      notes: 'Egzersiz notu',
+    });
+    mockApi({ detail: plan });
+    renderApp(editPath);
+    await login();
+    await screen.findByLabelText('Program adı');
+    expect(screen.getByLabelText('Süre (sn) — 1. gün, 1. egzersiz')).toHaveValue(45);
+    expect(screen.getByLabelText('Gün açıklaması — 1. gün (isteğe bağlı)')).toHaveValue('Gün notu');
+    expect(screen.getByLabelText('Egzersiz notu — 1. gün, 1. egzersiz (isteğe bağlı)')).toHaveValue(
+      'Egzersiz notu',
+    );
+    expect(screen.getByLabelText('Bitiş tarihi (isteğe bağlı)')).toHaveValue('2026-11-01');
+  });
+
+  it('alan hatasında değerleri korur ve yeniden denemeye izin verir', async () => {
+    mockApi({
+      detail: editablePlan(),
+      put: () =>
+        response(
+          {
+            detail: 'Hedef geçersiz',
+            errors: { 'days[0].exercises[0].reps': ['En fazla 20 tekrar.'] },
+          },
+          400,
+        ),
+    });
+    renderApp(editPath);
+    const user = await login();
+    await screen.findByLabelText('Program adı');
+    await user.type(screen.getByLabelText('Program adı'), ' güncel');
+    await user.click(screen.getByRole('button', { name: 'Değişiklikleri kaydet' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('En fazla 20 tekrar');
+    expect(screen.getByLabelText('Tekrar — 1. gün, 1. egzersiz')).toHaveAttribute(
+      'aria-invalid',
+      'true',
+    );
+    expect(screen.getByLabelText('Program adı')).toHaveValue('Mevcut kuvvet programı güncel');
+    expect(screen.getByRole('button', { name: 'Değişiklikleri kaydet' })).toBeEnabled();
+  });
+
+  it('409 sonrası eski sürümle tekrar yazmaz; güncel programı açma yolu sunar', async () => {
+    const fetchMock = mockApi({
+      detail: editablePlan(),
+      put: () => response({ detail: 'Program başka bir ekranda değişti.' }, 409),
+    });
+    renderApp(editPath);
+    const user = await login();
+    await screen.findByLabelText('Program adı');
+    await user.click(screen.getByRole('button', { name: 'Değişiklikleri kaydet' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('başka bir ekranda değişti');
+    expect(screen.getByRole('button', { name: 'Değişiklikleri kaydet' })).toBeDisabled();
+    await user.click(screen.getByRole('link', { name: 'Güncel programı aç' }));
+    await screen.findByRole('heading', { name: 'Mevcut kuvvet programı' });
+    expect(fetchMock.mock.calls.filter(([, options]) => options?.method === 'PUT')).toHaveLength(1);
+  });
+
+  it.each([
+    ['geçmiş', { isActive: false }, 'Geçmiş program'],
+    ['başka oluşturan', { trainerId: 'other-trainer' }, 'Yalnızca oluşturduğun'],
+    ['başka danışan', { userId: otherClientId }, 'seçili danışana ait değil'],
+    ['eksik sürüm', { updatedAt: undefined }, 'güncel sürümü alınamadı'],
+  ])('%s programın düzenleme formunu ve kataloğunu açmaz', async (_, changes, message) => {
+    const fetchMock = mockApi({ detail: { ...editablePlan(), ...changes } });
+    renderApp(editPath);
+    await login();
+    expect(await screen.findByRole('alert')).toHaveTextContent(message);
+    expect(screen.queryByLabelText('Program adı')).not.toBeInTheDocument();
+    expect(fetchMock.mock.calls.some(([url]) => url === '/api/exercises')).toBe(false);
+  });
+
+  it.each([false, true])(
+    'detayda yalnız aktif ve kendi programına düzenleme bağlantısı verir: %s',
+    async (isActive) => {
+      mockApi({ detail: { ...editablePlan(), isActive } });
+      renderApp(`/programlar/${clientId}/${planId}`);
+      await login();
+      await screen.findByRole('heading', { name: 'Mevcut kuvvet programı' });
+      expect(!!screen.queryByRole('link', { name: 'Programı düzenle' })).toBe(isActive);
+    },
+  );
+
+  it.each(['Admin', 'Dietitian'])('%s düzenleme rotasına erişemez', async (role) => {
+    const fetchMock = mockApi({ roles: [role], detail: editablePlan() });
+    renderApp(editPath);
+    await login();
+    expect(screen.queryByLabelText('Program adı')).not.toBeInTheDocument();
+    expect(fetchMock.mock.calls.some(([url]) => url === `/api/workout-plans/${planId}`)).toBe(
+      false,
+    );
+  });
+
+  it.each([new Response(null, { status: 204 }), response({ id: 'wrong' })])(
+    'boş veya yanlış güncelleme yanıtını başarı saymaz',
+    async (result) => {
+      mockApi({ detail: editablePlan(), put: () => result });
+      renderApp(editPath);
+      const user = await login();
+      await screen.findByLabelText('Program adı');
+      await user.click(screen.getByRole('button', { name: 'Değişiklikleri kaydet' }));
+      expect(await screen.findByRole('alert')).toHaveTextContent('Güncelleme yanıtı doğrulanamadı');
+      expect(screen.queryByRole('status')).not.toBeInTheDocument();
+      expect(screen.getByLabelText('Program adı')).toHaveValue('Mevcut kuvvet programı');
+    },
+  );
+
+  it('gönderim sırasında ikinci PUT isteğini engeller', async () => {
+    let finish!: (result: Response) => void;
+    const fetchMock = mockApi({
+      detail: editablePlan(),
+      put: () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    });
+    renderApp(editPath);
+    const user = await login();
+    await screen.findByLabelText('Program adı');
+    await user.dblClick(screen.getByRole('button', { name: 'Değişiklikleri kaydet' }));
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Kaydediliyor…' })).toBeDisabled(),
+    );
+    expect(fetchMock.mock.calls.filter(([, options]) => options?.method === 'PUT')).toHaveLength(1);
+    await act(async () => finish(response({ detail: 'Geçici hata' }, 500)));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Geçici hata');
   });
 });

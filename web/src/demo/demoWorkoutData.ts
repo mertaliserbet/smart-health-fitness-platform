@@ -1,5 +1,6 @@
 import type {
   CreateWorkoutPlanRequest,
+  UpdateWorkoutPlanRequest,
   ExerciseResponse,
   WorkoutPlanResponse,
 } from '../types/workout';
@@ -53,6 +54,7 @@ let plans: WorkoutPlanResponse[] = [
     startDate: '2026-10-01',
     endDate: '2026-11-01',
     isActive: true,
+    updatedAt: null,
     days: [
       {
         id: '27635ace-c211-4cfb-a340-c356701e6e43',
@@ -106,6 +108,7 @@ export function createDemoWorkoutPlan(userId: string, request: CreateWorkoutPlan
     userId,
     trainerId: demoAdvisors.Trainer.id,
     isActive: true,
+    updatedAt: null,
     days: request.days.map((day) => ({
       ...day,
       id: crypto.randomUUID(),
@@ -120,4 +123,32 @@ export function createDemoWorkoutPlan(userId: string, request: CreateWorkoutPlan
     ...plans.map((plan) => (plan.userId === userId ? { ...plan, isActive: false } : plan)),
     next,
   ];
+}
+
+export function updateDemoWorkoutPlan(id: string, request: UpdateWorkoutPlanRequest) {
+  const plan = getDemoWorkoutPlan(id);
+  if (
+    !plan.isActive ||
+    plan.trainerId !== demoAdvisors.Trainer.id ||
+    !demoClients.Trainer.some((client) => client.id === plan.userId)
+  )
+    throw new Error('Bu program düzenlenemez.');
+  if (plan.updatedAt !== request.expectedUpdatedAt)
+    throw new Error('Program başka bir ekranda değişti. Güncel programı yeniden aç.');
+  const next: WorkoutPlanResponse = {
+    ...plan,
+    ...structuredClone(request),
+    updatedAt: new Date().toISOString(),
+    days: request.days.map((day) => ({
+      ...day,
+      id: day.id ?? crypto.randomUUID(),
+      exercises: day.exercises.map((item) => {
+        const exercise = demoExercises.find((value) => value.id === item.exerciseId);
+        if (!exercise) throw new Error('Egzersiz katalogda bulunamadı.');
+        return { ...item, id: item.id ?? crypto.randomUUID(), exerciseName: exercise.name };
+      }),
+    })),
+  };
+  plans = plans.map((value) => (value.id === id ? next : value));
+  return structuredClone(next);
 }
