@@ -31,7 +31,7 @@ Mobil için `GET /api/users/me/advisors`, `/workout-plans`, `/nutrition-goals/ac
 
 Web'in danışan listesi/detayı, Admin kullanıcı listesi ve danışman ilişkisi yönetimi, egzersiz kataloğu yönetimi, Trainer program oluşturma/listeleme ve Dietitian hedef oluşturma/listeleme endpointleri de uygulanmıştır. Mevcut `AdvisorService`, `WorkoutService`, `NutritionService` ve `AddMobileAssignmentReads` tabloları kullanılır; bu adım yeni migration oluşturmaz. Gerçek web oturumlarında atamalar PostgreSQL'e kaydedilir ve mevcut mobil okuma endpointlerinden görülebilir.
 
-Kendi profilini güncelleme, rol değiştirme, program düzenleme, görev/not yazma ve antrenman oturumu endpointleri henüz uygulanmamıştır. Admin ilişki/egzersiz yönetiminin web ekranları ayrı bir adımdır; mevcut API işlemleri Swagger üzerinden kullanılabilir. Test hesapları yalnız geçici PostgreSQL fixture'ında hazırlanır; uygulama başlangıcında örnek veri/hesap eklenmez.
+Bağlı danışana görev/not ekleme ve görev durumunu güncelleme uygulanmıştır. Web formuna Danışan Detayı → Görevler / Notlar yolundan ulaşılır; mobil kullanıcı Planım → Görevler üzerinden kendi görevini tamamlar. Kendi profilini güncelleme, rol değiştirme, program düzenleme ve antrenman oturumu endpointleri henüz uygulanmamıştır. Admin ilişki/egzersiz yönetiminin web ekranları ayrı bir adımdır; mevcut API işlemleri Swagger üzerinden kullanılabilir. Test hesapları yalnız geçici PostgreSQL fixture'ında hazırlanır; uygulama başlangıcında örnek veri/hesap eklenmez.
 
 Base path:
 
@@ -499,7 +499,7 @@ Assigned Dietitian
 
 Trainer/Dietitian yalnızca yetkili olduğu danışanları görüntüleyebilir.
 
-Uygulanmıştır; response mevcut `UserProfileResponse` alanlarıdır (9.1). Bu endpoint danışan/hesap yönetimi kapsamındadır; `/api/users/me` ve auth servisi değiştirilmez. Danışman için aktif hesap, ilgili rol ve `Active` ilişki gerekir. Yetkisiz veya bulunamayan danışan aynı `404 ProblemDetails` ile yanıtlanır. Salt Admin erişiminde `birthDate`, `gender`, `heightCm` alanları `null` döner; Admin'in sağlık verisine erişimi yoktur. Admin ayrıca ilgili danışmana atanmış Trainer/Dietitian ise danışman yetkisi geçerlidir. Yanıt `no-store` içerir.
+Uygulanmıştır; response mevcut `UserProfileResponse` alanlarıdır (9.1). Bu endpoint danışan/hesap yönetimi kapsamındadır; `/api/users/me` ve auth servisi değiştirilmez. Danışman için aktif hesap, ilgili rol ve `Active` ilişki gerekir. Danışman için aktif bağlantı bulunmayan danışan `403 ProblemDetails` ile yanıtlanır; Admin için bulunamayan kullanıcı `404` döner. Salt Admin erişiminde `birthDate`, `gender`, `heightCm` alanları `null` döner; Admin'in sağlık verisine erişimi yoktur. Admin ayrıca ilgili danışmana atanmış Trainer/Dietitian ise danışman yetkisi geçerlidir. Yanıt `no-store` içerir.
 
 ---
 
@@ -782,7 +782,7 @@ Her öğe veri sözlüğündeki alanları taşır:
 
 Yazar adı bu yanıtta yoktur; mobil yazar ismi üretmez.
 
-Kendi notlarını okuma uygulanmıştır; belirli danışanın notlarını okuma ve not oluşturma henüz uygulanmamıştır. Notlar en yeni `createdAt` önce olacak şekilde sıralanır; danışman ilişkisi sonlandırılsa da kullanıcının geçmiş notları korunur.
+Kendi/bağlı danışanın notlarını okuma ve not oluşturma uygulanmıştır. Notlar en yeni `createdAt` önce olacak şekilde sıralanır; danışman ilişkisi sonlandırılsa da kullanıcının geçmiş notları korunur. Aktif bağlı danışman, aynı danışana ait diğer danışmanın notlarını da okuyabilir.
 
 ---
 
@@ -848,7 +848,7 @@ Yetki: `User`, yalnızca oturumdaki kullanıcının görevleri. Response: `200 O
 | completedAt, updatedAt | UTC ISO 8601 tarih/saat veya null |
 | createdAt | UTC ISO 8601 tarih/saat |
 
-Kendi görevlerini okuma uygulanmıştır. `status` büyük/küçük harfe duyarlıdır; bilinmeyen veya sayısal değer `400 ValidationProblemDetails` döner. Görevler en yeni `createdAt` önce olacak şekilde sıralanır. Atama ve durum değiştirme endpointleri henüz uygulanmamıştır.
+Kendi/bağlı danışanın görevlerini okuma, atama ve durum değiştirme uygulanmıştır. Kendi listesinde `status` büyük/küçük harfe duyarlıdır; bilinmeyen veya sayısal değer `400 ValidationProblemDetails` döner. Görevler en yeni `createdAt` önce olacak şekilde sıralanır. Danışan listesi tüm durumları döner; query ile başka kullanıcı seçilemez.
 
 ---
 
@@ -898,6 +898,8 @@ Response:
 
 ---
 
+Görev oluşturulurken `Pending`, `completedAt: null` olur. Başlık zorunlu, boşluklardan oluşamaz ve en fazla 200 karakterdir. Açıklama opsiyoneldir; `dueDate` varsa geçerli `YYYY-MM-DD` olmalıdır. Notta aynı başlık kuralı ve zorunlu, boş olmayan `content` uygulanır. Görev/not POST yanıtları oluşturulan kaydı yukarıdaki DTO alanlarıyla döner.
+
 ## 13.4 Görev Durumunu Güncelle
 
 ```http
@@ -918,6 +920,8 @@ Request:
   "status": "Completed"
 }
 ```
+
+Başarı: `200 UserTaskResponse`. User yalnız kendi `Pending`/`InProgress` görevini `Completed` yapabilir; başka durum isteği `403`. Görevi oluşturan danışman için halen aktif ilişki gerekir; `Pending`/`InProgress` durumundan tanımlı durumlara geçebilir. `Completed` ve `Cancelled` son durumlardır; farklı duruma geçiş `409 ProblemDetails` döner. Aynı durumun tekrar gönderilmesi `200` ile aynı kaydı döner ve `completedAt` değişmez. Tamamlama zamanı backend tarafından UTC olarak atanır. Başkasının veya bulunamayan görev için aynı `404 ProblemDetails` döner; diğer bağlı danışman görevin durumunu değiştiremez. Sayısal/bilinmeyen/küçük harfli status `400` döner.
 
 ---
 
@@ -952,6 +956,7 @@ Response:
     "id": "1dd55d43-ee46-4769-94e0-bad9fcf79df1",
     "name": "Bench Press",
     "description": "Chest exercise",
+    "instructions": null,
     "videoUrl": null,
     "imageUrl": null
   }
@@ -966,7 +971,7 @@ Response:
 GET /api/exercises/{exerciseId}
 ```
 
-Uygulanmıştır; Authenticated. `ExerciseDetailResponse`, 14.1 alanlarına ek olarak nullable `instructions` ve bool `isActive` içerir. Admin pasif egzersizi de okuyabilir; diğer kullanıcılar için pasif/bulunamayan egzersiz `404` döner.
+Uygulanmıştır; Authenticated. `ExerciseDetailResponse`, 14.1 alanlarına ek olarak bool `isActive` içerir; nullable `instructions` katalog listesinde de bulunur. Admin pasif egzersizi de okuyabilir; diğer kullanıcılar için pasif/bulunamayan egzersiz `404` döner.
 
 ---
 
@@ -1034,7 +1039,7 @@ Yetki:
 Assigned Trainer
 ```
 
-Uygulanmıştır; `WorkoutPlanSummaryResponse[]`, aktif ve geçmiş kayıtlar, 15.1 sıralama/alanları ve `no-store`. Aktif danışman ilişkisi olmayan veya pasif danışan `404` döner. Dietitian/Admin rolü bu erişimi sağlamaz.
+Uygulanmıştır; `WorkoutPlanSummaryResponse[]`, aktif ve geçmiş kayıtlar, 15.1 sıralama/alanları ve `no-store`. Aktif danışman ilişkisi olmayan veya pasif danışan `403` döner. Dietitian/Admin rolü bu erişimi sağlamaz.
 
 ---
 
@@ -1148,11 +1153,11 @@ Response:
 201 Created
 ```
 
-`weekday` zorunludur ve `Monday`–`Sunday` string değerlerinden biridir. `dayNumber` yalnızca program içi sıralamadır. Aynı plandaki iki gün aynı `weekday` değerini alamaz (`400 Bad Request`). V1'de yeni aktif plan önceki aktif planı pasifleştirir. `PUT /api/workout-plans/{workoutPlanId}` aynı gün benzersizliği ve tarih aralığı kuralını korur.
+`weekday` zorunludur ve `Monday`–`Sunday` string değerlerinden biridir. `dayNumber` yalnızca program içi sıralamadır. Aynı plandaki iki gün aynı `weekday` değerini alamaz (`400 Bad Request`). V1'de yeni aktif plan önceki aktif planı pasifleştirir. Program güncelleme PUT endpointi henüz uygulanmamıştır.
 
-POST uygulanmıştır. Başarı gövdesiz `201`, `Location: /api/workout-plans/{workoutPlanId}`. Trainer kimliği JWT'den alınır; request'te `trainerId`/`userId` veya bilinmeyen alan `400` döner. `name` ve gün adları 1–200 karakter; açıklamalar/notlar en fazla 10000; zorunlu `startDate`, nullable `endDate >= startDate`. 1–7 gün, her günde 1–100 egzersiz gerekir. Gün sıra numaraları plan içinde, egzersiz `order` değerleri gün içinde benzersiz ve pozitif tam sayı olmalıdır.
+POST uygulanmıştır. Başarı `201 WorkoutPlanResponse` JSON yanıtı ve `Location: /api/workout-plans/{workoutPlanId}`. Trainer kimliği JWT'den alınır; request'te `trainerId`/`userId` veya bilinmeyen alan `400` döner. `name` ve gün adları 1–200 karakter; açıklamalar/notlar en fazla 10000; zorunlu `startDate`, nullable `endDate >= startDate`. 1–7 gün, her günde 1–100 egzersiz gerekir. Gün sıra numaraları plan içinde, egzersiz `order` değerleri gün içinde benzersiz ve pozitif tam sayı olmalıdır.
 
-Hedef ya pozitif tam sayı `sets` + `reps`, ya pozitif tam sayı `durationSeconds` olmalıdır; iki biçim birlikte veya hedef olmadan `400` döner. `restSeconds` nullable ve negatif olmayan tam sayıdır. `weightKg` nullable, 0–99999999.99 aralığında ve en fazla iki ondalık basamaklıdır; bu DB depolama sınırıdır. Egzersiz ID'leri var ve aktif olmalıdır; geçersiz seçim `errors.days[0].exercises[0].exerciseId` gibi alan hatası üretir. Validation/ilişki hatası eski aktif planı değiştirmez. Önceki planın pasifleştirilmesi ve yeni plan/gün/egzersiz kaydı aynı transaction'dadır. Eşzamanlı atamalarda danışan satırı kilitlenir; her tamamlanan istek `201`, en son kaydedilen plan aktiftir. Yetkisiz/bulunamayan danışan `404`, yanlış rol `403` döner.
+Hedef ya pozitif tam sayı `sets` + `reps`, ya pozitif tam sayı `durationSeconds` olmalıdır; iki biçim birlikte veya hedef olmadan `400` döner. `restSeconds` nullable ve negatif olmayan tam sayıdır. `weightKg` nullable, 0–99999999.99 aralığında ve en fazla iki ondalık basamaklıdır; bu DB depolama sınırıdır. Egzersiz ID'leri var ve aktif olmalıdır; geçersiz seçim `errors.days[0].exercises[0].exerciseId` gibi alan hatası üretir. Validation/ilişki hatası eski aktif planı değiştirmez. Önceki planın pasifleştirilmesi ve yeni plan/gün/egzersiz kaydı aynı transaction'dadır. Eşzamanlı atamalarda danışan satırı kilitlenir; her tamamlanan istek `201`, en son kaydedilen plan aktiftir. Bağsız/pasif danışan veya yanlış rol `403` döner.
 
 ---
 
@@ -1434,7 +1439,7 @@ Yetki:
 Assigned Dietitian
 ```
 
-Uygulanmıştır; `NutritionGoalResponse[]`, aktif önce, başlangıç tarihi azalan ve ID sıralaması. 19.1 alanları kullanılır, boş liste `200 []`. Aktif ilişki ve aktif User danışan zorunludur; bulunamayan/yetkisiz danışan aynı `404` döner. Trainer/Admin rolü yeterli değildir. Yanıt `no-store` içerir.
+Uygulanmıştır; `NutritionGoalResponse[]`, aktif önce, oluşturma tarihi azalan ve ID sıralaması. 19.1 alanları kullanılır, boş liste `200 []`. Aktif ilişki ve aktif User danışan zorunludur; aktif bağlantı bulunmayan/pasif danışan `403` döner. Trainer/Admin rolü yeterli değildir. Yanıt `no-store` içerir.
 
 ---
 

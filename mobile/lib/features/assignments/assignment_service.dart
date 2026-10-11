@@ -5,6 +5,20 @@ class AssignmentService {
   const AssignmentService(this.api);
   final ApiService api;
 
+  Future<UserTask> completeTask(String id) async {
+    final task = UserTask.fromJson(
+      await api.patch('/api/tasks/${Uri.encodeComponent(id)}', {
+        'status': 'Completed',
+      }),
+    );
+    if (task.id != id || task.status != 'Completed') {
+      throw const ApiException(
+        'Görev tamamlama yanıtı doğrulanamadı. Listeyi yenileyin.',
+      );
+    }
+    return task;
+  }
+
   Future<List<WorkoutPlan>> getWorkoutPlans() async => (await api.getList(
     '/api/users/me/workout-plans',
   )).map((item) => WorkoutPlan.fromJson(item as Map<String, dynamic>)).toList();

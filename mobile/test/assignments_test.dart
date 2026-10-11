@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -356,6 +357,113 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets(
+    'task completion waits for backend, prevents double submit and survives refresh',
+    (tester) async {
+      final pending = Completer<http.Response>();
+      var writes = 0;
+      var completed = false;
+      await openApp(
+        tester,
+        handler: (request) async {
+          if (request.method == 'PATCH') {
+            writes++;
+            expect(request.url.path, '/api/tasks/task-id');
+            expect(request.headers['Authorization'], startsWith('Bearer '));
+            expect(jsonDecode(request.body), {'status': 'Completed'});
+            return pending.future;
+          }
+          if (request.url.path == '/api/users/me/tasks' && completed) {
+            return jsonResponse([
+              {...taskJson, 'status': 'Completed'},
+            ]);
+          }
+          return fixture(request);
+        },
+      );
+      await selectTab(tester, 1);
+      await tester.tap(find.widgetWithText(ChoiceChip, 'Görevler'));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Tamamlandı olarak işaretle'));
+      await tester.tap(find.text('Tamamlandı olarak işaretle'));
+      await tester.pump();
+      expect(find.text('Bekliyor'), findsOneWidget);
+      await tester.tap(find.text('Kaydediliyor…'));
+      expect(writes, 1);
+      // An older refresh must not overwrite the completion that is still in flight.
+      await tester.ensureVisible(find.text('Yenile').first);
+      await tester.tap(find.text('Yenile').first);
+      await tester.pump();
+      await tester.ensureVisible(find.text('Kaydediliyor…'));
+      completed = true;
+      pending.complete(jsonResponse({...taskJson, 'status': 'Completed'}));
+      await tester.pumpAndSettle();
+      expect(find.text('Tamamlandı'), findsOneWidget);
+      expect(find.text('Tamamlandı olarak işaretle'), findsNothing);
+      await tester.ensureVisible(find.text('Yenile').first);
+      await tester.tap(find.text('Yenile').first);
+      await tester.pumpAndSettle();
+      expect(find.text('Tamamlandı'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'failed task completion shows error and allows retry without losing task',
+    (tester) async {
+      var writes = 0;
+      await openApp(
+        tester,
+        handler: (request) async {
+          if (request.method == 'PATCH') {
+            writes++;
+            return writes == 1
+                ? jsonResponse({'detail': 'Sunucu geçici olarak kapalı.'}, 503)
+                : jsonResponse({...taskJson, 'status': 'Completed'});
+          }
+          if (request.url.path == '/api/users/me/tasks' && writes >= 2) {
+            return jsonResponse([
+              {...taskJson, 'status': 'Completed'},
+            ]);
+          }
+          return fixture(request);
+        },
+      );
+      await selectTab(tester, 1);
+      await tester.tap(find.widgetWithText(ChoiceChip, 'Görevler'));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Tamamlandı olarak işaretle'));
+      await tester.tap(find.text('Tamamlandı olarak işaretle'));
+      await tester.pumpAndSettle();
+      expect(find.text('Bekliyor'), findsOneWidget);
+      expect(
+        find.text('İşlem tamamlanamadı. Lütfen tekrar deneyin.'),
+        findsOneWidget,
+      );
+      await tester.ensureVisible(find.text('Tamamlandı olarak işaretle'));
+      await tester.tap(find.text('Tamamlandı olarak işaretle'));
+      await tester.pumpAndSettle();
+      expect(find.text('Tamamlandı'), findsOneWidget);
+      expect(writes, 2);
+    },
+  );
+
+  for (final status in ['Completed', 'Cancelled']) {
+    testWidgets('$status task has no completion action', (tester) async {
+      await openApp(
+        tester,
+        handler: (request) async => request.url.path == '/api/users/me/tasks'
+            ? jsonResponse([
+                {...taskJson, 'status': status},
+              ])
+            : fixture(request),
+      );
+      await selectTab(tester, 1);
+      await tester.tap(find.widgetWithText(ChoiceChip, 'Görevler'));
+      await tester.pumpAndSettle();
+      expect(find.text('Tamamlandı olarak işaretle'), findsNothing);
+    });
+  }
 
   for (final size in [
     const Size(320, 480),

@@ -12,6 +12,15 @@ const draft = {
   endDate: '',
 };
 describe('Beslenme hedefi tarih ve sayı sınırları', () => {
+  it('matches database precision and numeric bounds', () => {
+    expect(
+      prepareNutritionGoal({ ...draft, dailyCalories: '100.001' }).errors.dailycalories,
+    ).toBeTruthy();
+    expect(
+      prepareNutritionGoal({ ...draft, dailyCalories: '10000000000' }).errors.dailycalories,
+    ).toBeTruthy();
+    expect(prepareNutritionGoal({ ...draft, dailyCalories: '9999999999.99' }).errors).toEqual({});
+  });
   it('PostgreSQL hassasiyetine uygun değerleri kabul eder ve fazla basamağı göndermeden gösterir', () => {
     expect(prepareNutritionGoal({ ...draft, proteinGrams: '0.29' }).errors).toEqual({});
     expect(prepareNutritionGoal({ ...draft, proteinGrams: '0.291' }).errors.proteingrams).toBe(

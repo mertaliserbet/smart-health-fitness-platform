@@ -10,7 +10,6 @@ namespace SmartHealthFitness.Api.Controllers;
 [ApiController]
 [Authorize(Policy = RoleNames.Admin)]
 [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
-[TypeFilter(typeof(AssignmentExceptionFilter))]
 public sealed class AdvisorManagementController(AdvisorService advisorService) : ControllerBase
 {
     [HttpGet("api/users")]

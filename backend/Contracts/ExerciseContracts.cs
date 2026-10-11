@@ -4,10 +4,10 @@ using SmartHealthFitness.Api.Entities;
 
 namespace SmartHealthFitness.Api.Contracts;
 
-public sealed record ExerciseResponse(Guid Id, string Name, string? Description, string? VideoUrl, string? ImageUrl)
+public sealed record ExerciseResponse(Guid Id, string Name, string? Description, string? Instructions, string? VideoUrl, string? ImageUrl)
 {
     public static ExerciseResponse FromExercise(Exercise exercise) => new(
-        exercise.Id, exercise.Name, exercise.Description, exercise.VideoUrl, exercise.ImageUrl);
+        exercise.Id, exercise.Name, exercise.Description, exercise.Instructions, exercise.VideoUrl, exercise.ImageUrl);
 }
 
 public sealed record ExerciseDetailResponse(Guid Id, string Name, string? Description,

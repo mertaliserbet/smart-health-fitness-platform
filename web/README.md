@@ -21,11 +21,12 @@ Adres: http://localhost:5173. Port doluysa Vite başka port seçmez; backend COR
 - Trainer ve Dietitian danışan listesinde yerel isim araması ve profil görüntüleme.
 - Trainer için danışana göre program listesi ve detay, egzersiz kataloğu ve program oluşturup atama formu. Haftanın günü benzersizliği, gün/egzersiz sıralama, set/tekrar veya süre, dinlenme, ağırlık ve not alanları desteklenir.
 - Dietitian için danışana göre beslenme hedefi geçmişi ve yeni hedef atama formu. Günlük kalori, protein, karbonhidrat, yağ, su ve geçerlilik tarihleri desteklenir. Aktif hedefin bugün geçerli, henüz başlamamış veya süresi dolmuş olduğu ayrı gösterilir.
+- Trainer/Dietitian için **Danışan Detayı → Görevler / Notlar**: gerçek görev/not atama, geçmiş ve görev durumu. İstek hatasında form korunur; gönderim sırasında yinelenen kaydetme engellenir. Mobil kullanıcı görevi tamamlayınca sayfa yeniden açıldığında veya yenilendiğinde güncel durum görülür.
 - Admin kullanıcı listesi, sayfalama ve temel hesap bilgileri. Admin ekranında kişisel sağlık verisi gösterilmez.
 - Çoklu web rolünde yalnız hesaba atanmış rollerden panel seçimi. `User` hesabı mobil uygulamaya yönlendiren açıklama görür.
 - Responsive koyu arayüz; klavye odağı, görünür alan etiketleri ve yükleniyor/boş/hata durumları.
 
-Program düzenleme, beslenme kayıtları/ilerleme, görev/not, profil düzenleme, egzersiz/ekipman yönetimi ve Admin yazma işlemleri henüz uygulanmadı. Tamamlanmamış işlemler için işlevsiz düğmeler gösterilmez.
+Program düzenleme, beslenme kayıtları/ilerleme, profil düzenleme, egzersiz/ekipman yönetim formları ve Admin yazma ekranları henüz uygulanmadı. Tamamlanmamış işlemler için işlevsiz düğmeler gösterilmez.
 
 ## Gerçek API bağlantısı
 
@@ -33,27 +34,28 @@ Varsayılan `/api` istekleri geliştirmede Vite proxy üzerinden `http://localho
 
 API sözleşmesi değiştirilmez. Kullanılan istekler:
 
-| İşlem                        | Endpoint                                       |
-| ---------------------------- | ---------------------------------------------- |
-| Giriş, yenileme, çıkış       | `POST /api/auth/login`, `/refresh`, `/logout`  |
-| Profil                       | `GET /api/users/me`, `GET /api/users/{userId}` |
-| Antrenörün danışanları       | `GET /api/trainers/me/clients`                 |
-| Diyetisyenin danışanları     | `GET /api/dietitians/me/clients`               |
-| Yönetici kullanıcı listesi   | `GET /api/users?page=...&pageSize=20`          |
-| Egzersiz kataloğu            | `GET /api/exercises`                           |
-| Danışanın programları        | `GET /api/users/{userId}/workout-plans`        |
-| Program detayı               | `GET /api/workout-plans/{workoutPlanId}`       |
-| Program oluşturma ve atama   | `POST /api/users/{userId}/workout-plans`       |
-| Danışanın beslenme hedefleri | `GET /api/users/{userId}/nutrition-goals`      |
-| Beslenme hedefi atama        | `POST /api/users/{userId}/nutrition-goals`     |
+| İşlem                        | Endpoint                                               |
+| ---------------------------- | ------------------------------------------------------ |
+| Giriş, yenileme, çıkış       | `POST /api/auth/login`, `/refresh`, `/logout`          |
+| Profil                       | `GET /api/users/me`, `GET /api/users/{userId}`         |
+| Antrenörün danışanları       | `GET /api/trainers/me/clients`                         |
+| Diyetisyenin danışanları     | `GET /api/dietitians/me/clients`                       |
+| Yönetici kullanıcı listesi   | `GET /api/users?page=...&pageSize=20`                  |
+| Egzersiz kataloğu            | `GET /api/exercises`                                   |
+| Danışanın programları        | `GET /api/users/{userId}/workout-plans`                |
+| Program detayı               | `GET /api/workout-plans/{workoutPlanId}`               |
+| Program oluşturma ve atama   | `POST /api/users/{userId}/workout-plans`               |
+| Danışanın beslenme hedefleri | `GET /api/users/{userId}/nutrition-goals`              |
+| Beslenme hedefi atama        | `POST /api/users/{userId}/nutrition-goals`             |
+| Görev/not listesi ve atama   | `GET/POST /api/users/{userId}/tasks`, `/advisor-notes` |
 
 Refresh token `sessionStorage` içinde sekme oturumu boyunca saklanır; access token yalnız bellektedir. Sayfa yenilenince refresh ve ardından `/api/users/me` ile oturum doğrulanır. Eşzamanlı `401` cevapları tek refresh isteğini paylaşır. Başarısız yenileme veya tekrar `401` oturumu kapatır. `403` için refresh denenmez. Sunucu çıkışı başarısız olsa bile yerel oturum temizlenir ve kullanıcıya açıklanır.
 
 Tablodaki endpointler backend'de uygulanmıştır. Danışan listesi yalnız aktif ilişkileri içerir; başka kullanıcının profilini yalnız atanmış danışman veya Admin okuyabilir. Admin temel hesap alanlarını görür; kişisel sağlık alanları ayrıca aktif danışman ilişkisi gerektirir. Web'deki menü/route denetimlerine ek olarak JWT, rol ve aktif `UserAdvisor` denetimi backend tarafından uygulanır. Public register yalnız User hesabı üretir; danışman/Admin rolleri güvenilir kurulum sırasında verilir. Admin ilişki atama/sonlandırma ve egzersiz oluşturma/güncelleme API'leri hazırdır, bunların web yönetim formları henüz yoktur.
 
-Program formu mevcut `CreateWorkoutPlanRequest` alanlarıyla POST gönderir; Trainer kimliği request'e eklenmez, backend access token'dan alır. Sözleşmedeki gövdesiz `201 Created` yanıtı desteklenir. Başarıdan sonra danışanın program listesi yeniden yüklenir; istek hatasında form korunur. Atamadan hemen önce aktif danışan listesi tekrar kontrol edilir. Backend aktif ilişkiyi ve tek aktif program kuralını aynı transaction içinde uygular; pasif egzersizler yeni atamada kullanılamaz. Gün/egzersiz sıra kuralları ve ağırlık alanındaki en fazla iki ondalık basamak hem formda hem backend'de doğrulanır.
+Program formu mevcut `CreateWorkoutPlanRequest` alanlarıyla POST gönderir; Trainer kimliği request'e eklenmez, backend access token'dan alır. Güncel API `201 WorkoutPlanResponse` JSON yanıtı döner; web daha eski gövdesiz `201` yanıtıyla da çalışabilir. Başarıdan sonra danışanın program listesi yeniden yüklenir; istek hatasında form korunur. Atamadan hemen önce aktif danışan listesi tekrar kontrol edilir. Backend aktif ilişkiyi ve tek aktif program kuralını aynı transaction içinde uygular; pasif egzersizler yeni atamada kullanılamaz. Gün/egzersiz sıra kuralları ve ağırlık alanındaki en fazla iki ondalık basamak hem formda hem backend'de doğrulanır.
 
-Beslenme hedefi formu mevcut sözleşmedeki yedi alanı gönderir; Dietitian kimliğini backend token üzerinden alır. Başarı için sözleşmedeki oluşturulan aktif hedefi içeren JSON yanıtı beklenir; antrenman POST'undan farklı olarak gövdesiz `201` beslenme ataması için başarı sayılmaz. Atamadan önce aktif danışan ilişkisi tekrar kontrol edilir; hata halinde form korunur. Backend yeni hedefi aktif edip önceki hedefi aynı veritabanı işleminde pasifleştirir. Sayı alanları en fazla iki ondalık basamak kabul eder. Su alanı yalnız hedeftir; tüketim verisi gösterilmez.
+Beslenme hedefi formu mevcut sözleşmedeki yedi alanı gönderir; Dietitian kimliğini backend token üzerinden alır. Başarı için sözleşmedeki oluşturulan aktif hedefi içeren JSON yanıtı beklenir; gövdesiz `201` beslenme ataması için başarı sayılmaz. Atamadan önce aktif danışan ilişkisi tekrar kontrol edilir; hata halinde form korunur. Backend yeni hedefi aktif edip önceki hedefi aynı veritabanı işleminde pasifleştirir. Sayı alanları en fazla iki ondalık basamak kabul eder. Su alanı yalnız hedeftir; tüketim verisi gösterilmez.
 
 Yerel tarayıcı kontrolünde gerçek giriş → danışan seçimi → antrenman programı atama/detay ve diyetisyen beslenme hedefi atama/liste akışları ayrı geçici PostgreSQL veritabanıyla doğrulandı. Bu atamalar mobilin kullandığı `/api/users/me/workout-plans` ve `/api/users/me/nutrition-goals/active` yanıtlarında da doğrulandı. Flutter ekranları bu kontrolün kapsamına dahil değildir.
 
@@ -78,6 +80,8 @@ npm run format:check
 Testler; token yenileme/eşzamanlı istek, çıkış sırasında yenileme, 401/403 ayrımı, alan hataları, rol sınırları, panel seçimi, danışan araması ve profil geçişini doğrular. API yanıtları testlerde taklit edilir; bu testler gerçek backend entegrasyonunun yerine geçmez.
 
 Program testleri; sözleşmeye uygun POST ve gövdesiz 201, geçersiz tarih/sayı, benzersiz gün seçimi, sıralama ve süre hedefleri, backend alan hatalarında formun korunması, yinelenen gönderimin engellenmesi ve farklı danışanın programına erişim sınırlarını kapsar. Windows sandbox ortamında Vitest geçici dosyaları görünmezse, test komutunun `TEMP` ve `TMP` değişkenleri yazılabilir `web/node_modules/.vitest-tmp` dizinine yönlendirilebilir.
+
+Opt-in web/API/PostgreSQL/Android kontrolü: Docker Desktop ve emülatör açıkken repository kökünde `pwsh -File mobile/tool/auth_smoke.ps1 -AssignmentWriteTest`. Test yalnız geçici veritabanına bağlanır; `AssignmentLive.test.tsx` gerçek React formlarını JSDOM içinde, taklit edilmemiş HTTP ile kullanır. Sonra Android Planım ekranı atamaları okur ve görevi tamamlar. Bu opt-in test normal `npm test` içinde atlanır. Test API portu `5064` kullanılır; `5060/5061` web fetch tarafından engellendiğinden web testi için kullanılmaz.
 
 Beslenme testleri; sözleşmeye uygun POST ve JSON yanıtı, hedef listesinin tekrar yüklenmesi, sıfır/ondalık değerler, geçersiz sayı/tarih ve sayı hassasiyeti, API alan hataları, sonlanan ilişkide atamanın engellenmesi, rol sınırları, yinelenen gönderim, hata sonrası tekrar deneme, hedef geçerlilik sınırları ve örnek hedeflerin tek aktif hedef davranışını doğrular. Gerçek API/PostgreSQL kontrolleri repository kökünden `./backend/tests/AuthSmoke.ps1` ile çalıştırılır; ayrıntılar backend README'sindedir.
 

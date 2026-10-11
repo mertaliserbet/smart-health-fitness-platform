@@ -17,14 +17,14 @@ public sealed class ExerciseService(AppDbContext dbContext)
         }
         return query.OrderBy(exercise => exercise.Name).ThenBy(exercise => exercise.Id)
             .Select(exercise => new ExerciseResponse(exercise.Id, exercise.Name, exercise.Description,
-                exercise.VideoUrl, exercise.ImageUrl)).ToArrayAsync(cancellationToken);
+                exercise.Instructions, exercise.VideoUrl, exercise.ImageUrl)).ToArrayAsync(cancellationToken);
     }
 
     public async Task<ExerciseDetailResponse> GetExerciseAsync(Guid id, bool isAdmin, CancellationToken cancellationToken)
     {
         var exercise = await dbContext.Exercises.AsNoTracking()
             .SingleOrDefaultAsync(exercise => exercise.Id == id && (exercise.IsActive || isAdmin), cancellationToken);
-        return exercise is null ? throw AssignmentRequestException.NotFound("Egzersiz bulunamadı.")
+        return exercise is null ? throw AssignmentException.NotFound("Egzersiz bulunamadı.")
             : ExerciseDetailResponse.FromExercise(exercise);
     }
 
@@ -33,7 +33,7 @@ public sealed class ExerciseService(AppDbContext dbContext)
     {
         var exercise = id is null ? new Exercise() : await dbContext.Exercises
             .SingleOrDefaultAsync(exercise => exercise.Id == id, cancellationToken)
-            ?? throw AssignmentRequestException.NotFound("Egzersiz bulunamadı.");
+            ?? throw AssignmentException.NotFound("Egzersiz bulunamadı.");
         exercise.Name = request.Name.Trim();
         exercise.Description = request.Description?.Trim();
         exercise.Instructions = request.Instructions?.Trim();

@@ -34,7 +34,10 @@ public static class ServiceCollectionExtensions
         services.AddScoped<SmartHealthFitness.Api.Services.ExerciseService>();
 
         services.AddControllers(options =>
-            options.ModelMetadataDetailsProviders.Add(new SystemTextJsonValidationMetadataProvider()))
+        {
+            options.ModelMetadataDetailsProviders.Add(new SystemTextJsonValidationMetadataProvider());
+            options.Filters.Add<SmartHealthFitness.Api.Services.AssignmentExceptionFilter>();
+        })
             .AddJsonOptions(options =>
             options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
         services.AddProblemDetails();

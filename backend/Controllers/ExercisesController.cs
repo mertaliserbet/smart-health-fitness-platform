@@ -11,7 +11,6 @@ namespace SmartHealthFitness.Api.Controllers;
 [Authorize]
 [Route("api/exercises")]
 [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
-[TypeFilter(typeof(AssignmentExceptionFilter))]
 public sealed class ExercisesController(ExerciseService exerciseService) : ControllerBase
 {
     [HttpGet]
@@ -19,7 +18,7 @@ public sealed class ExercisesController(ExerciseService exerciseService) : Contr
         [FromQuery] Guid? muscleGroupId, CancellationToken cancellationToken)
     {
         if (muscleGroupId is not null)
-            throw AssignmentRequestException.Invalid("muscleGroupId", "Kas grubu filtreleme bu aşamada desteklenmiyor.");
+            throw AssignmentException.Invalid("muscleGroupId", "Kas grubu filtreleme bu aşamada desteklenmiyor.");
         return Ok(await exerciseService.GetExercisesAsync(search, cancellationToken));
     }
 

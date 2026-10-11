@@ -2,10 +2,13 @@ param(
     [string] $Device = 'emulator-5554',
     [ValidateRange(1024, 65535)] [int] $ApiPort = 5061,
     [ValidateRange(1024, 65535)] [int] $DatabasePort = 55433,
-    [switch] $AssignmentTest
+    [switch] $AssignmentTest,
+    [switch] $AssignmentWriteTest
 )
 
 $ErrorActionPreference = 'Stop'
+# Fetch blocks SIP ports 5060/5061; use a browser-compatible test port for real web forms.
+if ($AssignmentWriteTest -and -not $PSBoundParameters.ContainsKey('ApiPort')) { $ApiPort = 5064 }
 $repositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
 $projectFile = Join-Path $repositoryRoot 'backend/SmartHealthFitness.Api.csproj'
 $composeFile = Join-Path $repositoryRoot 'backend/docker-compose.yml'
@@ -62,7 +65,7 @@ try {
     }
     if (-not $ready) { throw 'Test API health check failed.' }
 
-    if ($AssignmentTest) {
+    if ($AssignmentTest -or $AssignmentWriteTest) {
         # Register disposable accounts via the API; seed assignments only in this test database.
         . (Join-Path $repositoryRoot 'backend/tests/AssignmentFixture.ps1')
         function Invoke-CheckSql([string] $Sql) {
@@ -84,10 +87,35 @@ try {
             [void] (Invoke-CheckSql "DELETE FROM user_roles WHERE user_id = '$id'; INSERT INTO user_roles (id, user_id, role_id) SELECT gen_random_uuid(), '$id'::uuid, id FROM roles WHERE name = '$role';")
         }
         Add-AssignmentFixture $ids.user $ids.other $ids.trainer $ids.dietitian
+        if ($AssignmentWriteTest) {
+            # Keep advisor relationships, catalog and history; current assignments must come from web forms.
+            $id = $ids.user
+            [void] (Invoke-CheckSql "DELETE FROM workout_plans WHERE user_id='$id' AND is_active; DELETE FROM nutrition_goals WHERE user_id='$id'; DELETE FROM user_tasks WHERE user_id='$id'; DELETE FROM advisor_notes WHERE user_id='$id';")
+            $oldApiUrl = $env:VITE_API_BASE_URL; $oldLiveUser = $env:ASSIGNMENT_LIVE_USER_ID
+            try {
+                $env:VITE_API_BASE_URL = "http://127.0.0.1:$ApiPort"
+                $env:ASSIGNMENT_LIVE_USER_ID = $ids.user
+                Set-Location (Join-Path $repositoryRoot 'web')
+                $nodeCommand = Get-Command node -ErrorAction SilentlyContinue
+                $nodePath = if ($nodeCommand) { $nodeCommand.Source } else {
+                    Join-Path $env:USERPROFILE '.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node.exe'
+                }
+                & $nodePath node_modules/vitest/vitest.mjs run src/AssignmentLive.test.tsx
+                if ($LASTEXITCODE -ne 0) { throw 'Real web assignment forms failed.' }
+            } finally {
+                $env:VITE_API_BASE_URL = $oldApiUrl; $env:ASSIGNMENT_LIVE_USER_ID = $oldLiveUser
+            }
+        }
         Set-Location (Join-Path $repositoryRoot 'mobile')
         flutter test integration_test/assignment_flow_test.dart -d $Device `
-            "--dart-define=API_BASE_URL=http://10.0.2.2:$ApiPort" --dart-define=ASSIGNMENT_TEST_FIXTURE=true
+            "--dart-define=API_BASE_URL=http://10.0.2.2:$ApiPort" --dart-define=ASSIGNMENT_TEST_FIXTURE=true `
+            "--dart-define=ASSIGNMENT_WRITE_TEST_FIXTURE=$($AssignmentWriteTest.IsPresent.ToString().ToLowerInvariant())"
         if ($LASTEXITCODE -ne 0) { throw 'Android assignment integration test failed.' }
+        if ($AssignmentWriteTest) {
+            $completedCount = Invoke-CheckSql "SELECT count(*) FROM user_tasks WHERE user_id='$($ids.user)' AND title='Esneme yap' AND status='Completed' AND completed_at IS NOT NULL;"
+            if ($completedCount -ne '1') { throw 'Mobile completion was not persisted in PostgreSQL.' }
+            Write-Output 'PASS: real React forms -> API -> PostgreSQL -> Android Planım -> task completion persisted.'
+        }
         Write-Output 'PASS: real Flutter Planım/Rehberim reads, own-user isolation and logout against PostgreSQL.'
     }
     else {

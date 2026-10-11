@@ -7,7 +7,7 @@ namespace SmartHealthFitness.Api.Services;
 
 public sealed class WorkoutService(AppDbContext dbContext, AdvisorService advisorService)
 {
-    public async Task<Guid> CreateWorkoutPlanAsync(Guid userId, Guid trainerId, CreateWorkoutPlanRequest request,
+    public async Task<WorkoutPlanResponse> CreatePlanAsync(Guid userId, Guid trainerId, CreateWorkoutPlanRequest request,
         CancellationToken cancellationToken)
     {
         await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
@@ -23,7 +23,7 @@ public sealed class WorkoutService(AppDbContext dbContext, AdvisorService adviso
             for (var item = 0; item < request.Days[day].Exercises.Length; item++)
                 if (!activeIds.Contains(request.Days[day].Exercises[item].ExerciseId!.Value))
                     errors[$"days[{day}].exercises[{item}].exerciseId"] = ["Egzersiz bulunamadı veya aktif değil."];
-        if (errors.Count != 0) throw new AssignmentRequestException(400, "Validation failed", errors);
+        if (errors.Count != 0) throw new AssignmentException(400, "Validation failed", errors);
         var now = DateTime.UtcNow;
         await dbContext.WorkoutPlans.Where(plan => plan.UserId == userId && plan.IsActive)
             .ExecuteUpdateAsync(setters => setters.SetProperty(plan => plan.IsActive, false)
@@ -37,8 +37,9 @@ public sealed class WorkoutService(AppDbContext dbContext, AdvisorService adviso
                     RestSeconds = item.RestSeconds, WeightKg = item.WeightKg, Notes = item.Notes?.Trim() }).ToList() }).ToList() };
         dbContext.WorkoutPlans.Add(plan);
         await dbContext.SaveChangesAsync(cancellationToken);
+        var response = (await GetWorkoutPlanAsync(plan.Id, trainerId, false, true, cancellationToken))!;
         await transaction.CommitAsync(cancellationToken);
-        return plan.Id;
+        return response;
     }
 
     public Task<WorkoutPlanSummaryResponse[]> GetWorkoutPlansAsync(Guid userId, CancellationToken cancellationToken) =>

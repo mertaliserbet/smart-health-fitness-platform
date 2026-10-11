@@ -34,7 +34,7 @@ foreach ($path in @($trainerPath, $dietitianPath, $profilePath, '/api/users', '/
 foreach ($path in @('/api/users', ('/api/user-advisors?userId=' + $clientId), $trainerPath, $dietitianPath)) {
     Assert-Check ((Invoke-Api 'GET' $path $null $clientUser.Token).Status -eq 403) 'User role can access staff management.'
 }
-Assert-Check ((Invoke-Api 'GET' ($profilePath + '?advisorId=' + $trainer.Id) $null $trainer.Token).Status -eq 404) 'Unassigned client profile exposed.'
+Assert-Check ((Invoke-Api 'GET' ($profilePath + '?advisorId=' + $trainer.Id) $null $trainer.Token).Status -eq 403) 'Unassigned client profile exposed.'
 $adminList = Invoke-Api 'GET' '/api/users?page=1&pageSize=2&role=Trainer' $null $AdminToken
 Assert-Check ($adminList.Status -eq 200 -and $adminList.NoStore -and $adminList.Body.pageSize -eq 2 -and
     $adminList.Body.items.Count -le 2 -and $adminList.Body.totalCount -ge 1) 'Admin pagination or role filter failed.'
@@ -92,7 +92,7 @@ Assert-Check ($advisorProfile.Status -eq 200 -and $advisorProfile.Body.heightCm 
 $adminProfile = Invoke-Api 'GET' $profilePath $null $AdminToken
 Assert-Check ($adminProfile.Status -eq 200 -and $null -eq $adminProfile.Body.heightCm -and
     $null -eq $adminProfile.Body.birthDate -and $null -eq $adminProfile.Body.gender) 'Admin-only profile exposes health data.'
-Assert-Check ((Invoke-Api 'GET' ('/api/users/' + $OtherUserId) $null $trainer.Token).Status -eq 404) 'Unassigned user profile leaked.'
+Assert-Check ((Invoke-Api 'GET' ('/api/users/' + $OtherUserId) $null $trainer.Token).Status -eq 403) 'Unassigned user profile leaked.'
 
 $exerciseRequest = @{ name = 'Workflow Squat'; description = 'Kontrollü hareket'; instructions = 'Dizleri kontrollü bük.';
     videoUrl = $null; imageUrl = $null; isActive = $true }
@@ -112,9 +112,9 @@ function New-WorkflowPlan {
 }
 $planRequest = New-WorkflowPlan
 Assert-Check ((Invoke-Api 'POST' $workoutPath $planRequest $dietitian.Token).Status -eq 403) 'Dietitian can assign workout.'
-Assert-Check ((Invoke-Api 'POST' ('/api/users/' + $OtherUserId + '/workout-plans') $planRequest $trainer.Token).Status -eq 404) 'Trainer assigned unlinked user.'
+Assert-Check ((Invoke-Api 'POST' ('/api/users/' + $OtherUserId + '/workout-plans') $planRequest $trainer.Token).Status -eq 403) 'Trainer assigned unlinked user.'
 $planCreated = Invoke-Api 'POST' $workoutPath $planRequest $trainer.Token
-Assert-Check ($planCreated.Status -eq 201 -and $null -eq $planCreated.Body) 'Workout POST must return bodyless 201.'
+Assert-Check ($planCreated.Status -eq 201 -and $planCreated.Body.days[0].exercises[0].weightKg -eq 20.25) 'Workout POST must return the persisted plan JSON.'
 $plans = Invoke-Api 'GET' $workoutPath $null $trainer.Token
 Assert-Check ($plans.Status -eq 200 -and $plans.Body.Count -eq 1 -and $plans.Body[0].isActive) 'Web plan list failed.'
 $planId = $plans.Body[0].id
@@ -193,8 +193,8 @@ foreach ($relationEntry in @(@{ Id = $trainerRelation.userAdvisorId; Staff = $tr
     $endBody = @{ status = 'Ended'; endDate = $today }
     Assert-Check ((Invoke-Api 'PATCH' $endPath $endBody $AdminToken).Status -eq 200) 'Admin relation termination failed.'
     Assert-Check ((Invoke-Api 'PATCH' $endPath $endBody $AdminToken).Status -eq 200) 'Termination not idempotent.'
-    Assert-Check ((Invoke-Api 'POST' $relationEntry.Path $relationEntry.Body $relationEntry.Staff.Token).Status -eq 404) 'Ended advisor retained write access.'
-    Assert-Check ((Invoke-Api 'GET' $relationEntry.Path $null $relationEntry.Staff.Token).Status -eq 404) 'Ended advisor retained history access.'
+    Assert-Check ((Invoke-Api 'POST' $relationEntry.Path $relationEntry.Body $relationEntry.Staff.Token).Status -eq 403) 'Ended advisor retained write access.'
+    Assert-Check ((Invoke-Api 'GET' $relationEntry.Path $null $relationEntry.Staff.Token).Status -eq 403) 'Ended advisor retained history access.'
     Assert-Check ((Invoke-Api 'PATCH' $endPath @{ status = 'Active'; endDate = $today } $AdminToken).Status -eq 400) 'Ended relation reactivated.'
 }
 Assert-Check ((Invoke-Api 'GET' '/api/users/me/advisors' $null $clientUser.Token).Body.Count -eq 0) 'Ended advisors visible to mobile.'

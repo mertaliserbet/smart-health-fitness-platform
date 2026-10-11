@@ -54,6 +54,14 @@ class ApiService {
   Future<List<dynamic>> getList(String path) =>
       _request<List<dynamic>>('GET', path, authenticated: true);
 
+  Future<Map<String, dynamic>> patch(String path, Map<String, dynamic> body) =>
+      _request<Map<String, dynamic>>(
+        'PATCH',
+        path,
+        body: body,
+        authenticated: true,
+      );
+
   Future<Map<String, dynamic>> post(
     String path,
     Map<String, dynamic> body, {
@@ -271,7 +279,7 @@ class ApiService {
         400 || 422 => 'Bilgileri kontrol edip tekrar deneyin.',
         401 => 'Oturum sona erdi. Lütfen tekrar giriş yapın.',
         403 => 'Bu işlem için yetkiniz bulunmuyor.',
-        409 => 'Bu e-posta adresiyle zaten bir hesap var.',
+        409 => 'Kayıt mevcut durumunda değiştirilemiyor. Listeyi yenileyin.',
         429 => 'Çok fazla istek gönderildi. Biraz sonra tekrar deneyin.',
         _ => 'İşlem tamamlanamadı. Lütfen tekrar deneyin.',
       },

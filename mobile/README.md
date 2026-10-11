@@ -15,16 +15,16 @@ Ana Sayfa'daki karşılama doğrulanmış `/api/users/me` verisinden, tarih ciha
 
 ## Planım ve Rehberim: gerçek backend okumaları
 
-Backend, `AddMobileAssignmentReads` migration'ı ile danışman, program, hedef, görev ve not verilerini kalıcı olarak tutar ve aşağıdaki altı okuma endpointini sunar. Mobil yalnız gerçek HTTP/DB verisini kullanır; kayıt yoksa empty state gösterir. Web'in geliştirme önizlemesindeki örnekler mobilde kullanılmaz. Admin/Trainer/Dietitian atama ve yazma endpointleri henüz uygulanmadı; bu çalışma mobil okumalarını ve bunlar için gereken minimum veri altyapısını içerir.
+Backend, `AddMobileAssignmentReads` migration'ı ile danışman, program, hedef, görev ve not verilerini kalıcı olarak tutar ve aşağıdaki altı okuma endpointini sunar. Mobil yalnız gerçek HTTP/DB verisini kullanır; kayıt yoksa empty state gösterir. Web'in geliştirme önizlemesindeki örnekler mobilde kullanılmaz. Trainer/Dietitian program/hedef/görev/not yazmaları ve mobil görev tamamlama hazırdır; Admin rol/ilişki atama bu çalışmada eklenmez.
 
 - **Planım → Antrenman:** atanmış program listesi; Programı Gör ile haftanın günleri, egzersizler, set/tekrar, süre, dinlenme, ağırlık ve notlar. Bu çalışma salt okunurdur; antrenman tamamlama eklenmedi.
 - **Planım → Beslenme:** yerel cihaz tarihiyle geçerli tek aktif kalori/makro/su hedefi. Hedefler tüketim gibi gösterilmez; yüzde veya sahte ilerleme üretilmez.
-- **Planım → Görevler:** görev başlığı, açıklaması, son tarihi ve durumu; ayrı kaynaktan tarihli danışman notları. Görev değiştirme bu çalışmanın kapsamında değildir.
+- **Planım → Görevler:** görev başlığı, açıklaması, son tarihi ve durumu; bekleyen/devam eden görevleri tamamlayabilme; ayrı kaynaktan tarihli danışman notları.
 - **Rehberim:** aktif koç ve diyetisyenler ayrı listelenir; birden fazla danışman desteklenir. Ad/soyad, varsa ünvan ve uzmanlık, atama tarihi gösterilir. API'de bulunmayan fotoğraf, iletişim veya biyografi üretilmez.
 - Kaynaklar ilk ziyaretlerinde yüklenir; **Yenile / Tekrar dene** ile yeniden okunur. Sekme/kaydırma konumu korunur. Bir kaynağın hatası diğerinin verisini gizlemez; yenileme hatasında önceki veriler eski oldukları belirtilerek korunur.
 - `200 []` yanıtı boş durumdur. Beslenmede yalnız `404` + `code: NutritionGoalNotFound` hedef yok anlamına gelir. Genel `404` için **servis henüz hazır değil veya kullanılamıyor** mesajı gösterilir; eksik backend boş atama gibi sunulmaz. Ağ/izin/yanıt hataları görünürdür; mevcut Bearer/refresh/oturum sona ermesi akışı kullanılır.
 
-Migration uygulanmalıdır: `baslat.cmd` mevcut başlatıcısı bunu backend başlangıcında yapar; ayrı çalıştırırken backend README'sindeki `database update` adımını kullanın. Mevcut kullanıcı veritabanına bu çalışmada test ataması eklenmez. Yazma akışları tamamlandığında Admin → Trainer/Dietitian → mobil zinciri ayrıca kontrol edilmelidir. Bu aşamanın gerçek okuma testi, yalnız geçici PostgreSQL fixture'ında hazırlanan kayıtları Android ekranlarında okur; web üzerinden atama testi değildir.
+Mevcut `AddMobileAssignmentReads` migration'ı uygulanmalıdır: `baslat.cmd` başlatıcısı bunu backend başlangıcında yapar; ayrı çalıştırırken backend README'sindeki `database update` adımını kullanın. Yazma entegrasyonu yeni migration gerektirmez. Test kayıtları yalnız geçici PostgreSQL'de oluşturulur; gerçek kullanım için aktif danışman ilişkisi ve egzersiz kataloğu hazır olmalıdır. Admin ilişki atama bu görevin kapsamı dışındadır. `-AssignmentTest` okuma fixture'ını, `-AssignmentWriteTest` gerçek web formu → API → PostgreSQL → Android okuma/tamamlama akışını doğrular.
 
 ## Gereksinimler ve çalıştırma
 
@@ -141,11 +141,16 @@ Gerçek Android + API + PostgreSQL testi için Docker Desktop ve mevcut Android 
 ```powershell
 ./mobile/tool/auth_smoke.ps1
 ./mobile/tool/auth_smoke.ps1 -AssignmentTest
+./mobile/tool/auth_smoke.ps1 -AssignmentWriteTest
 ```
 
-Varsayılan cihaz `emulator-5554`, API portu `5061`, PostgreSQL portu `55433`; parametrelerle değiştirilebilir. Test adresi Android emülatörünün `10.0.2.2` adresidir; fiziksel cihaz için bu script kullanılmaz.
+Varsayılan cihaz `emulator-5554`, API portu `5061` (web yazma testinde `5064`), PostgreSQL portu `55433`; parametrelerle değiştirilebilir. Test adresi Android emülatörünün `10.0.2.2` adresidir; fiziksel cihaz için bu script kullanılmaz.
 
 `-AssignmentTest` ayrı `assignment_flow_test.dart` testini çalıştırır: fixture hesaplarını API ile oluşturur, yalnız geçici PostgreSQL'e program/hedef/görev/not/danışman ilişkisi ekler; Android'de login → Planım/program detayı/hedef/görev/not → Rehberim → logout → ikinci kullanıcı veri izolasyonu akışını doğrular. `ASSIGNMENT_TEST_FIXTURE` yalnız test ortamı kontrolüdür. Sabit test kimlikleri ve test parolası geliştirme/üretim hesabı değildir; uygulama startup'ına seed eklenmez.
+
+`-AssignmentWriteTest`: ilişkiler ve egzersiz kataloğu test fixture'ından gelir; güncel program/hedef/görev/not atamaları gerçek React formlarından HTTP ile oluşturulur (`web/src/AssignmentLive.test.tsx`, JSDOM). Android emülatöründeki Planım aynı PostgreSQL kayıtlarını okur, kullanıcı görevi tamamlar, tamamlanma DB sorgusuyla doğrulanır. Web test bağımlılıkları da kurulmuş olmalıdır. Bu kontrol tarayıcı görünüm testi değildir; gerçek form gönderimi ve gerçek API/veritabanı ile native Android entegrasyonudur.
+
+Planım → Görevler: bekleyen/devam eden görevde **Tamamlandı olarak işaretle** sunucuya `PATCH /api/tasks/{taskId}` gönderir. Görev başarılı yanıttan sonra tamamlandı gösterilir; kaydederken tekrar gönderim kapalıdır. Hata halinde görev korunur ve tekrar denenebilir. Tamamlanan/iptal edilen görevde buton gösterilmez; oturum yenileme mevcut ortak API istemcisini kullanır.
 
 Script benzersiz Compose projesi/veritabanı açar, mevcut backend migration'larını yalnızca test veritabanına uygular, rastgele geçici secret kullanır; Flutter cihaz testi bitince kendi API sürecini ve PostgreSQL container/volume/network'ünü kaldırır. Mevcut kullanıcı veritabanına bağlanmaz. Native güvenli depolama, yeni servisle oturum açılışı, tek kullanımlık refresh, `401` kurtarma, gerçek kilo/ölçüm ekleme ve geçmiş, logout iptalini doğrular. Cihaz testinde klavye girdisi Flutter test aracıyla simüle edilir; HTTP ve güvenli depolama gerçek Android ortamını kullanır. `AUTH_TEST_FIXTURE` yalnızca entegrasyon testinin çalıştırma kontrolüdür; üretim özelliği değildir.
 

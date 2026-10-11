@@ -10,7 +10,6 @@ namespace SmartHealthFitness.Api.Controllers;
 [ApiController]
 [Authorize]
 [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
-[TypeFilter(typeof(AssignmentExceptionFilter))]
 public sealed class AdvisorClientsController(AdvisorService advisorService, WorkoutService workoutService,
     NutritionService nutritionService) : ControllerBase
 {
@@ -39,11 +38,11 @@ public sealed class AdvisorClientsController(AdvisorService advisorService, Work
     }
 
     [HttpPost("api/users/{userId:guid}/workout-plans"), Authorize(Policy = RoleNames.Trainer)]
-    public async Task<IActionResult> CreateWorkoutPlanAsync(Guid userId, CreateWorkoutPlanRequest request,
+    public async Task<ActionResult<WorkoutPlanResponse>> CreateWorkoutPlanAsync(Guid userId, CreateWorkoutPlanRequest request,
         CancellationToken cancellationToken)
     {
-        var planId = await workoutService.CreateWorkoutPlanAsync(userId, CurrentUserId, request, cancellationToken);
-        return Created($"/api/workout-plans/{planId}", null);
+        var plan = await workoutService.CreatePlanAsync(userId, CurrentUserId, request, cancellationToken);
+        return Created($"/api/workout-plans/{plan.Id}", plan);
     }
 
     [HttpGet("api/users/{userId:guid}/nutrition-goals"), Authorize(Policy = RoleNames.Dietitian)]
@@ -61,4 +60,28 @@ public sealed class AdvisorClientsController(AdvisorService advisorService, Work
         var goal = await nutritionService.CreateNutritionGoalAsync(userId, CurrentUserId, request, cancellationToken);
         return Created($"/api/users/{userId}/nutrition-goals", goal);
     }
+
+    [HttpGet("api/users/{userId:guid}/tasks"), Authorize(Roles = RoleNames.Trainer + "," + RoleNames.Dietitian)]
+    public async Task<ActionResult<UserTaskResponse[]>> GetTasksAsync(Guid userId, CancellationToken ct)
+    {
+        await advisorService.RequireClientAsync(CurrentUserId, userId, null, ct);
+        return Ok(await advisorService.GetUserTasksAsync(userId, null, ct));
+    }
+
+    [HttpPost("api/users/{userId:guid}/tasks"), Authorize(Roles = RoleNames.Trainer + "," + RoleNames.Dietitian)]
+    public async Task<ActionResult<UserTaskResponse>> CreateTaskAsync(Guid userId,
+        CreateUserTaskRequest request, CancellationToken ct) =>
+        StatusCode(201, await advisorService.CreateTaskAsync(userId, CurrentUserId, request, ct));
+
+    [HttpGet("api/users/{userId:guid}/advisor-notes"), Authorize(Roles = RoleNames.Trainer + "," + RoleNames.Dietitian)]
+    public async Task<ActionResult<AdvisorNoteResponse[]>> GetNotesAsync(Guid userId, CancellationToken ct)
+    {
+        await advisorService.RequireClientAsync(CurrentUserId, userId, null, ct);
+        return Ok(await advisorService.GetAdvisorNotesAsync(userId, ct));
+    }
+
+    [HttpPost("api/users/{userId:guid}/advisor-notes"), Authorize(Roles = RoleNames.Trainer + "," + RoleNames.Dietitian)]
+    public async Task<ActionResult<AdvisorNoteResponse>> CreateNoteAsync(Guid userId,
+        CreateAdvisorNoteRequest request, CancellationToken ct) =>
+        StatusCode(201, await advisorService.CreateNoteAsync(userId, CurrentUserId, request, ct));
 }

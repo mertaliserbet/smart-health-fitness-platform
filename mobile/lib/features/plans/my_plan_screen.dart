@@ -4,6 +4,7 @@ import '../../core/api_service.dart';
 import '../assignments/assignment_models.dart';
 import '../assignments/assignment_service.dart';
 import '../assignments/assignment_widgets.dart';
+import 'user_task_card.dart';
 
 class MyPlanScreen extends StatefulWidget {
   const MyPlanScreen({super.key, required this.api, required this.active});
@@ -15,6 +16,7 @@ class MyPlanScreen extends StatefulWidget {
 
 class _MyPlanScreenState extends State<MyPlanScreen> {
   int _tab = 0;
+  int _taskRevision = 0;
   static const _labels = ['Antrenman', 'Beslenme', 'Görevler'];
   AssignmentService get _service => AssignmentService(widget.api);
 
@@ -119,6 +121,7 @@ class _MyPlanScreenState extends State<MyPlanScreen> {
               storageKey: 'my-tasks-notes',
               children: [
                 AssignmentSection<List<UserTask>>(
+                  key: ValueKey(_taskRevision),
                   title: 'Görevlerim',
                   active: widget.active && _tab == 2,
                   load: _service.getTasks,
@@ -129,20 +132,15 @@ class _MyPlanScreenState extends State<MyPlanScreen> {
                           children: [Text('Henüz görev atanmadı.')],
                         ),
                       for (final task in tasks)
-                        AssignmentCard(
-                          children: [
-                            Text(
-                              task.title,
-                              style: Theme.of(context).textTheme.titleMedium,
-                            ),
-                            Text(taskStatusLabels[task.status]!),
-                            if (task.description?.isNotEmpty == true)
-                              Text(task.description!),
-                            if (task.dueDate != null)
-                              Text(
-                                'Son tarih: ${assignmentDate(task.dueDate!)}',
-                              ),
-                          ],
+                        UserTaskCard(
+                          key: ValueKey(task.id),
+                          task: task,
+                          service: _service,
+                          onCompleted: (_) {
+                            if (!mounted) return;
+                            // Reload the canonical list; discard any older in-flight refresh.
+                            setState(() => _taskRevision++);
+                          },
                         ),
                     ],
                   ),

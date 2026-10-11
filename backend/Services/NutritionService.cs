@@ -9,7 +9,7 @@ public sealed class NutritionService(AppDbContext dbContext, AdvisorService advi
 {
     public Task<NutritionGoalResponse[]> GetNutritionGoalsAsync(Guid userId, CancellationToken cancellationToken) =>
         dbContext.NutritionGoals.AsNoTracking().Where(goal => goal.UserId == userId)
-            .OrderByDescending(goal => goal.IsActive).ThenByDescending(goal => goal.StartDate).ThenBy(goal => goal.Id)
+            .OrderByDescending(goal => goal.IsActive).ThenByDescending(goal => goal.CreatedAt).ThenBy(goal => goal.Id)
             .Select(goal => new NutritionGoalResponse(goal.Id, goal.DailyCalories, goal.ProteinGrams,
                 goal.CarbohydrateGrams, goal.FatGrams, goal.WaterMl, goal.IsActive, goal.StartDate, goal.EndDate))
             .ToArrayAsync(cancellationToken);
