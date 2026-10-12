@@ -41,6 +41,8 @@ export interface WorkoutPlanSummaryResponse {
 }
 
 export interface WorkoutPlanResponse extends WorkoutPlanSummaryResponse {
+  updatedAt: string | null;
+  hasSessions?: boolean;
   userId: string;
   trainerId: string;
   description: string | null;
@@ -59,4 +61,14 @@ export interface WorkoutPlanResponse extends WorkoutPlanSummaryResponse {
       durationSeconds?: number | null;
     })[];
   }[];
+}
+
+export interface UpdateWorkoutPlanRequest extends Omit<CreateWorkoutPlanRequest, 'days'> {
+  expectedUpdatedAt: string | null;
+  days: (Omit<CreateWorkoutPlanRequest['days'][number], 'exercises'> & {
+    id: string | null;
+    exercises: (CreateWorkoutPlanRequest['days'][number]['exercises'][number] & {
+      id: string | null;
+    })[];
+  })[];
 }

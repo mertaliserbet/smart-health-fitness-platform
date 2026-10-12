@@ -1,4 +1,9 @@
-import type { CreateWorkoutPlanRequest, Weekday } from '../types/workout';
+import type {
+  CreateWorkoutPlanRequest,
+  UpdateWorkoutPlanRequest,
+  WorkoutPlanResponse,
+  Weekday,
+} from '../types/workout';
 import { isValidDate } from './date';
 export { localDate } from './date';
 
@@ -16,6 +21,7 @@ export const weekdayLabel = (value: Weekday) =>
   weekdays.find((day) => day.value === value)?.label ?? value;
 
 export interface WorkoutExerciseDraft {
+  id?: string;
   key: string;
   exerciseId: string;
   exerciseName: string;
@@ -29,6 +35,7 @@ export interface WorkoutExerciseDraft {
 }
 
 export interface WorkoutDayDraft {
+  id?: string;
   key: string;
   name: string;
   weekday: Weekday;
@@ -42,6 +49,59 @@ export interface WorkoutPlanDraft {
   startDate: string;
   endDate: string;
   days: WorkoutDayDraft[];
+}
+
+export function workoutPlanDraft(plan: WorkoutPlanResponse): WorkoutPlanDraft {
+  const text = (value: number | null | undefined) => (value == null ? '' : String(value));
+  return {
+    name: plan.name,
+    description: plan.description ?? '',
+    startDate: plan.startDate,
+    endDate: plan.endDate ?? '',
+    days: [...plan.days]
+      .sort((a, b) => a.dayNumber - b.dayNumber)
+      .map((day) => ({
+        id: day.id,
+        key: day.id,
+        name: day.name,
+        weekday: day.weekday,
+        description: day.description ?? '',
+        exercises: [...day.exercises]
+          .sort((a, b) => a.order - b.order)
+          .map((item) => ({
+            id: item.id,
+            key: item.id,
+            exerciseId: item.exerciseId,
+            exerciseName: item.exerciseName,
+            mode: item.durationSeconds != null ? 'duration' : 'reps',
+            sets: text(item.sets),
+            reps: text(item.reps),
+            durationSeconds: text(item.durationSeconds),
+            restSeconds: text(item.restSeconds),
+            weightKg: text(item.weightKg),
+            notes: item.notes ?? '',
+          })),
+      })),
+  };
+}
+
+export function workoutPlanUpdate(
+  draft: WorkoutPlanDraft,
+  request: CreateWorkoutPlanRequest,
+  expectedUpdatedAt: string | null,
+): UpdateWorkoutPlanRequest {
+  return {
+    ...request,
+    expectedUpdatedAt,
+    days: request.days.map((day, index) => ({
+      ...day,
+      id: draft.days[index].id ?? null,
+      exercises: day.exercises.map((item, position) => ({
+        ...item,
+        id: draft.days[index].exercises[position].id ?? null,
+      })),
+    })),
+  };
 }
 
 export function newWorkoutDay(weekday: Weekday, number: number): WorkoutDayDraft {
@@ -86,7 +146,9 @@ export function prepareWorkoutPlan(draft: WorkoutPlanDraft): {
       (zero ? number < 0 : number <= 0)
     )
       errors[path.toLowerCase()] = zero
-        ? 'Sıfır veya pozitif bir tam sayı gir.'
+        ? integer
+          ? 'Sıfır veya pozitif bir tam sayı gir.'
+          : 'Sıfır veya pozitif bir değer gir.'
         : integer
           ? 'Pozitif bir tam sayı gir.'
           : 'Sıfırdan büyük bir değer gir.';
@@ -120,7 +182,7 @@ export function prepareWorkoutPlan(draft: WorkoutPlanDraft): {
           if (sets === null) errors[`${path}.sets`] = 'Set sayısı gerekli.';
           if (reps === null) errors[`${path}.reps`] = 'Tekrar sayısı gerekli.';
         } else if (durationSeconds === null) errors[`${path}.durationseconds`] = 'Süre gerekli.';
-        const weightKg = optionalNumber(exercise.weightKg, `${path}.weightkg`, false);
+        const weightKg = optionalNumber(exercise.weightKg, `${path}.weightkg`, false, true);
         if (weightKg !== null && Number.isFinite(weightKg)) {
           if (weightKg > 99999999.99)
             errors[`${path}.weightkg`] = 'Değer izin verilen sayı sınırını aşıyor.';

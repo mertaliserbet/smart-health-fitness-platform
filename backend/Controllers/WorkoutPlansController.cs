@@ -13,6 +13,19 @@ namespace SmartHealthFitness.Api.Controllers;
 [Route("api/workout-plans")]
 public sealed class WorkoutPlansController(WorkoutService workoutService) : ControllerBase
 {
+    [HttpPut("{workoutPlanId:guid}")]
+    [Authorize(Roles = RoleNames.Trainer)]
+    [ProducesResponseType<WorkoutPlanResponse>(StatusCodes.Status200OK, "application/json")]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest, "application/problem+json")]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound, "application/problem+json")]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict, "application/problem+json")]
+    public async Task<ActionResult<WorkoutPlanResponse>> UpdateWorkoutPlanAsync(Guid workoutPlanId,
+        UpdateWorkoutPlanRequest request, CancellationToken cancellationToken)
+    {
+        var trainerId = Guid.Parse(User.FindFirst(JwtRegisteredClaimNames.Sub)!.Value);
+        return Ok(await workoutService.UpdatePlanAsync(workoutPlanId, trainerId, request, cancellationToken));
+    }
+
     [HttpGet("{workoutPlanId:guid}")]
     [ProducesResponseType<WorkoutPlanResponse>(StatusCodes.Status200OK, "application/json")]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound, "application/problem+json")]

@@ -2,15 +2,17 @@ import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'rea
 import { ArrowDown, ArrowUp, Check, Dumbbell, Plus, Trash2 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router';
 import type { ClientSummary } from '../types/api';
-import type { ExerciseResponse } from '../types/workout';
+import type { ExerciseResponse, WorkoutPlanResponse } from '../types/workout';
 import { ApiError } from '../services/apiClient';
 import { requireClient } from '../services/clientService';
-import { createWorkoutPlan } from '../services/workoutService';
+import { createWorkoutPlan, updateWorkoutPlan } from '../services/workoutService';
 import {
   localDate,
   moveItem,
   newWorkoutDay,
   prepareWorkoutPlan,
+  workoutPlanDraft,
+  workoutPlanUpdate,
   weekdayLabel,
   weekdays,
   type WorkoutDayDraft,
@@ -112,22 +114,29 @@ export function WorkoutPlanForm({
   client,
   exercises,
   demo,
+  plan,
 }: {
   client: ClientSummary;
   exercises: ExerciseResponse[];
   demo: boolean;
+  plan?: WorkoutPlanResponse;
 }) {
   const navigate = useNavigate();
-  const [draft, setDraft] = useState<WorkoutPlanDraft>(() => ({
-    name: '',
-    description: '',
-    startDate: localDate(),
-    endDate: '',
-    days: [newWorkoutDay('Monday', 1)],
-  }));
+  const [draft, setDraft] = useState<WorkoutPlanDraft>(() =>
+    plan
+      ? workoutPlanDraft(plan)
+      : {
+          name: '',
+          description: '',
+          startDate: localDate(),
+          endDate: '',
+          days: [newWorkoutDay('Monday', 1)],
+        },
+  );
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [failure, setFailure] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [conflict, setConflict] = useState(false);
   const pending = useRef<AbortController | null>(null);
   useEffect(() => () => pending.current?.abort(), []);
 
@@ -191,7 +200,9 @@ export function WorkoutPlanForm({
     setErrors(prepared.errors);
     setFailure(null);
     if (Object.keys(prepared.errors).length) {
-      setFailure('Eksik veya hatalı alanları kontrol et. Program henüz atanmadı.');
+      setFailure(
+        `Eksik veya hatalı alanları kontrol et. Program henüz ${plan ? 'güncellenmedi' : 'atanmadı'}.`,
+      );
       document.getElementById(`workout-${Object.keys(prepared.errors)[0]}`)?.focus();
       return;
     }
@@ -200,15 +211,24 @@ export function WorkoutPlanForm({
     setSubmitting(true);
     try {
       await requireClient(client.id, 'Trainer', demo, controller.signal);
-      await createWorkoutPlan(client.id, prepared.request, demo, controller.signal);
+      if (plan)
+        await updateWorkoutPlan(
+          plan.id,
+          client.id,
+          workoutPlanUpdate(draft, prepared.request, plan.updatedAt),
+          demo,
+          controller.signal,
+        );
+      else await createWorkoutPlan(client.id, prepared.request, demo, controller.signal);
       if (!controller.signal.aborted)
-        await navigate(`/programlar/${client.id}`, {
+        await navigate(plan ? `/programlar/${client.id}/${plan.id}` : `/programlar/${client.id}`, {
           replace: true,
-          state: { programAssigned: true },
+          state: plan ? { programUpdated: plan.id } : { programAssigned: true },
         });
     } catch (reason) {
       if (controller.signal.aborted) return;
       if (reason instanceof ApiError) {
+        if (plan && reason.status === 409) setConflict(true);
         const fields: Record<string, string> = {};
         for (const [key, values] of Object.entries(reason.problem.errors ?? {})) {
           fields[
@@ -222,7 +242,9 @@ export function WorkoutPlanForm({
         setFailure([reason.message, ...Object.values(fields)].join(' '));
       } else
         setFailure(
-          reason instanceof Error ? reason.message : 'Program atanamadı. Tekrar deneyebilirsin.',
+          reason instanceof Error
+            ? reason.message
+            : 'Program kaydedilemedi. Tekrar deneyebilirsin.',
         );
     } finally {
       if (!controller.signal.aborted) setSubmitting(false);
@@ -240,7 +262,8 @@ export function WorkoutPlanForm({
               <div>
                 <h2>Program bilgileri</h2>
                 <p className="muted">
-                  {client.firstName} {client.lastName} için bir başlangıç.
+                  {client.firstName} {client.lastName} için{' '}
+                  {plan ? 'aktif programı düzenle.' : 'bir başlangıç.'}
                 </p>
               </div>
             </div>
@@ -548,7 +571,7 @@ export function WorkoutPlanForm({
                             numberField('durationSeconds', 'Süre (sn)', 1)
                           )}
                           {numberField('restSeconds', 'Dinlenme (sn, isteğe bağlı)', 0)}
-                          {numberField('weightKg', 'Ağırlık (kg, isteğe bağlı)', 0.01, 'any')}
+                          {numberField('weightKg', 'Ağırlık (kg, isteğe bağlı)', 0, 'any')}
                         </div>
                         <Field
                           path={`${path}.notes`}
@@ -574,7 +597,7 @@ export function WorkoutPlanForm({
         </fieldset>
       </div>
       <aside className="panel assignment-summary">
-        <span className="eyebrow">03 · ATAMA ÖZETİ</span>
+        <span className="eyebrow">03 · {plan ? 'PROGRAM' : 'ATAMA'} ÖZETİ</span>
         <h2>{draft.name.trim() || 'Yeni program'}</h2>
         <p className="muted">
           {client.firstName} {client.lastName}
@@ -601,12 +624,14 @@ export function WorkoutPlanForm({
           ))}
         </ul>
         <p className="assignment-warning">
-          Yeni program atandığında danışanın önceki aktif programı pasif hale gelir.
+          {plan
+            ? 'Kaydettiğinde danışanın aktif programı güncellenir. Mobil uygulamada yeniden açıldığında değişiklikler görünür.'
+            : 'Yeni program atandığında danışanın önceki aktif programı pasif hale gelir.'}
         </p>
         {demo && (
           <p className="demo-save-note">
-            Önizleme ataması yalnız bu sayfa oturumunda tutulur. Sayfa yenilenince sıfırlanır;
-            sunucuya ve mobil uygulamaya kaydedilmez.
+            Önizleme {plan ? 'düzenlemesi' : 'ataması'} yalnız bu sayfa oturumunda tutulur. Sayfa
+            yenilenince sıfırlanır; sunucuya ve mobil uygulamaya kaydedilmez.
           </p>
         )}
         {failure && (
@@ -614,13 +639,28 @@ export function WorkoutPlanForm({
             {failure}
           </p>
         )}
-        <button type="submit" className="button primary" disabled={submitting}>
-          {submitting ? 'Atanıyor…' : demo ? 'Örnek atamayı dene' : 'Programı ata'}
+        {conflict && plan && (
+          <Link className="button secondary" to={`/programlar/${client.id}/${plan.id}`}>
+            Güncel programı aç
+          </Link>
+        )}
+        <button type="submit" className="button primary" disabled={submitting || conflict}>
+          {submitting
+            ? plan
+              ? 'Kaydediliyor…'
+              : 'Atanıyor…'
+            : plan
+              ? demo
+                ? 'Örnek düzenlemeyi dene'
+                : 'Değişiklikleri kaydet'
+              : demo
+                ? 'Örnek atamayı dene'
+                : 'Programı ata'}
         </button>
         <Link
           className="button secondary"
           aria-disabled={submitting}
-          to={`/programlar/${client.id}`}
+          to={plan ? `/programlar/${client.id}/${plan.id}` : `/programlar/${client.id}`}
           onClick={(event) => {
             if (submitting) event.preventDefault();
           }}

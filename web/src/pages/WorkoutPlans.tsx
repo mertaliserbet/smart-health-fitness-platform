@@ -84,6 +84,9 @@ export function WorkoutPlans() {
       </section>
       {!loading && !error && data?.client && (
         <section className="panel workout-list-panel">
+          <Link className="button secondary" to={`/danisanlar/${userId}/antrenmanlar`}>
+            Antrenman geçmişi
+          </Link>
           <div className="panel-heading">
             <div>
               <h2>

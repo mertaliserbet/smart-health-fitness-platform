@@ -1,5 +1,5 @@
-import { ArrowLeft, CalendarDays, Dumbbell, Plus } from 'lucide-react';
-import { Link, useParams } from 'react-router';
+import { ArrowLeft, CalendarDays, Dumbbell, Pencil, Plus } from 'lucide-react';
+import { Link, useLocation, useParams } from 'react-router';
 import { useAuth } from '../auth/AuthProvider';
 import { useLoad } from '../hooks/useLoad';
 import { requireClient } from '../services/clientService';
@@ -10,7 +10,8 @@ import { weekdayLabel } from '../utils/workoutPlan';
 
 export function WorkoutPlanDetail() {
   const { userId = '', workoutPlanId = '' } = useParams();
-  const { demo } = useAuth();
+  const { demo, user } = useAuth();
+  const location = useLocation();
   const { data, loading, error, retry } = useLoad(
     async (signal) => {
       const client = await requireClient(userId, 'Trainer', demo, signal);
@@ -33,6 +34,11 @@ export function WorkoutPlanDetail() {
       ) : (
         data && (
           <>
+            {location.state?.programUpdated === data.plan.id && (
+              <p className="success-notice" role="status">
+                Program güncellendi. Danışanın aktif programında değişiklikler kaydedildi.
+              </p>
+            )}
             <div className="page-heading">
               <div>
                 <span className="eyebrow">
@@ -41,12 +47,30 @@ export function WorkoutPlanDetail() {
                 <h1>{data.plan.name}</h1>
                 <p className="muted">Haftalık antrenman günleri ve egzersiz hedefleri.</p>
               </div>
-              <Link className="button secondary" to={`/programlar/${userId}/yeni`}>
-                <Plus size={17} aria-hidden="true" />
-                Yeni program
-              </Link>
+              <div className="row-actions">
+                {data.plan.isActive &&
+                  !data.plan.hasSessions &&
+                  data.plan.trainerId === user?.id && (
+                    <Link
+                      className="button primary"
+                      to={`/programlar/${userId}/${workoutPlanId}/duzenle`}
+                    >
+                      <Pencil size={17} aria-hidden="true" /> Programı düzenle
+                    </Link>
+                  )}
+                <Link className="button secondary" to={`/programlar/${userId}/yeni`}>
+                  <Plus size={17} aria-hidden="true" />
+                  Yeni program
+                </Link>
+              </div>
             </div>
             <section className="panel plan-overview">
+              {data.plan.hasSessions && (
+                <p>
+                  Bu programla antrenman başlatılmış. Geçmişi korumak için değişiklikleri yeni
+                  program olarak ata.
+                </p>
+              )}
               <span className={`plan-status ${data.plan.isActive ? 'active' : ''}`}>
                 {data.plan.isActive ? 'Aktif program' : 'Geçmiş program'}
               </span>

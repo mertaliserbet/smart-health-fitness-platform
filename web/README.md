@@ -30,7 +30,9 @@ Adres: http://localhost:5173. Port doluysa Vite başka port seçmez; backend COR
 
 Trainer ve Dietitian için **Danışanlar → profil → Kilo / Vücut ilerlemesi**: mevcut kilo ve vücut ölçüm kayıtları, dönem seçimi, zaman eksenli grafikler, son ölçüm/değişim özeti ve sayfalı kayıt tablosu.
 
-Program düzenleme, beslenme kayıtları/ilerleme, profil düzenleme, rol yönetimi ve ekipman yönetim formu henüz uygulanmadı. Tamamlanmamış işlemler için işlevsiz düğmeler gösterilmez.
+Trainer, danışan profilinden veya program listesinden **Antrenman geçmişi** ekranına ulaşır. Durum filtresi ve sayfalama gerçek API'yi kullanır; detayda hedefler, gerçekleşen set/tekrar/süre/ağırlık, notlar ve kaydı olmayan egzersizler gösterilir. Tamamlanmış oturum kısmi olabilir. Geçmiş yalnız aktif bağlı Trainer'a açıktır; demo modunda gerçek giriş açıklaması gösterilir. Oturum başlatılmış programın düzenleme bağlantısı kapanır; yeni program atanabilir.
+
+Beslenme kayıtları/ilerleme, profil düzenleme, rol yönetimi ve ekipman yönetim formu henüz uygulanmadı. Tamamlanmamış işlemler için işlevsiz düğmeler gösterilmez.
 
 ## Gerçek API bağlantısı
 
@@ -38,27 +40,30 @@ Varsayılan `/api` istekleri geliştirmede Vite proxy üzerinden `http://localho
 
 İstekler `docs/API_CONTRACT.md` sözleşmesini kullanır. Admin katalog listesi için mevcut route'a `includeInactive=true` seçeneği eklenmiştir; Trainer/mobil varsayılan liste yanıtı korunur. Kullanılan istekler:
 
-| İşlem                         | Endpoint                                                                 |
-| ----------------------------- | ------------------------------------------------------------------------ |
-| Giriş, yenileme, çıkış        | `POST /api/auth/login`, `/refresh`, `/logout`                            |
-| Profil                        | `GET /api/users/me`, `GET /api/users/{userId}`                           |
-| Danışan kilo/vücut ilerlemesi | `GET /api/users/{userId}/weight-records`, `/body-measurements`           |
-| Antrenörün danışanları        | `GET /api/trainers/me/clients`                                           |
-| Diyetisyenin danışanları      | `GET /api/dietitians/me/clients`                                         |
-| Yönetici kullanıcı listesi    | `GET /api/users?page=...&pageSize=20`                                    |
-| Danışman adaylarını bulma     | `GET /api/users?page=...&pageSize=20&role=Trainer\|Dietitian&search=...` |
-| Danışman ilişkileri ve atama  | `GET /api/user-advisors?userId=...`, `POST /api/user-advisors`           |
-| İlişkiyi sonlandırma          | `PATCH /api/user-advisors/{userAdvisorId}`                               |
-| Egzersiz kataloğu             | `GET /api/exercises`                                                     |
-| Admin egzersiz kataloğu       | `GET /api/exercises?includeInactive=true`                                |
-| Egzersiz detayı / güncelleme  | `GET/PUT /api/exercises/{exerciseId}`                                    |
-| Egzersiz oluşturma            | `POST /api/exercises`                                                    |
-| Danışanın programları         | `GET /api/users/{userId}/workout-plans`                                  |
-| Program detayı                | `GET /api/workout-plans/{workoutPlanId}`                                 |
-| Program oluşturma ve atama    | `POST /api/users/{userId}/workout-plans`                                 |
-| Danışanın beslenme hedefleri  | `GET /api/users/{userId}/nutrition-goals`                                |
-| Beslenme hedefi atama         | `POST /api/users/{userId}/nutrition-goals`                               |
-| Görev/not listesi ve atama    | `GET/POST /api/users/{userId}/tasks`, `/advisor-notes`                   |
+| İşlem                        | Endpoint                                                                 |
+| ---------------------------- | ------------------------------------------------------------------------ |
+| Giriş, yenileme, çıkış       | `POST /api/auth/login`, `/refresh`, `/logout`                            |
+| Profil                       | `GET /api/users/me`, `GET /api/users/{userId}`                           |
+| Kilo/vücut ilerlemesi        | `GET /api/users/{userId}/weight-records`, `/body-measurements`           |
+| Antrenörün danışanları       | `GET /api/trainers/me/clients`                                           |
+| Diyetisyenin danışanları     | `GET /api/dietitians/me/clients`                                         |
+| Yönetici kullanıcı listesi   | `GET /api/users?page=...&pageSize=20`                                    |
+| Danışman adaylarını bulma    | `GET /api/users?page=...&pageSize=20&role=Trainer\|Dietitian&search=...` |
+| Danışman ilişkileri ve atama | `GET /api/user-advisors?userId=...`, `POST /api/user-advisors`           |
+| İlişkiyi sonlandırma         | `PATCH /api/user-advisors/{userAdvisorId}`                               |
+| Egzersiz kataloğu            | `GET /api/exercises`                                                     |
+| Admin egzersiz kataloğu      | `GET /api/exercises?includeInactive=true`                                |
+| Egzersiz detayı / güncelleme | `GET/PUT /api/exercises/{exerciseId}`                                    |
+| Egzersiz oluşturma           | `POST /api/exercises`                                                    |
+| Danışanın programları        | `GET /api/users/{userId}/workout-plans`                                  |
+| Program detayı               | `GET /api/workout-plans/{workoutPlanId}`                                 |
+| Aktif programı düzenleme     | `PUT /api/workout-plans/{workoutPlanId}`                                 |
+| Danışanın antrenman geçmişi  | `GET /api/users/{userId}/workout-sessions?page=1&pageSize=20&status=...` |
+| Antrenman oturumu detayı     | `GET /api/workout-sessions/{sessionId}`                                  |
+| Program oluşturma ve atama   | `POST /api/users/{userId}/workout-plans`                                 |
+| Danışanın beslenme hedefleri | `GET /api/users/{userId}/nutrition-goals`                                |
+| Beslenme hedefi atama        | `POST /api/users/{userId}/nutrition-goals`                               |
+| Görev/not listesi ve atama   | `GET/POST /api/users/{userId}/tasks`, `/advisor-notes`                   |
 
 Refresh token `sessionStorage` içinde sekme oturumu boyunca saklanır; access token yalnız bellektedir. Sayfa yenilenince refresh ve ardından `/api/users/me` ile oturum doğrulanır. Eşzamanlı `401` cevapları tek refresh isteğini paylaşır. Başarısız yenileme veya tekrar `401` oturumu kapatır. `403` için refresh denenmez. Sunucu çıkışı başarısız olsa bile yerel oturum temizlenir ve kullanıcıya açıklanır.
 
@@ -73,6 +78,8 @@ Egzersiz formu POST/PUT işlemlerinde mevcut `CreateExerciseRequest` alanların�
 Admin giriş → egzersiz ekleme → düzenleme/pasifleştirme → yeniden aktifleştirme akışı tarayıcıda ayrı geçici PostgreSQL ile doğrulandı. Kayıtların ve talimatların kalıcılığı, pasif kaydın Trainer kataloğundan çıkarılması, yeniden aktif kaydın geri gelmesi ve Trainer'ın düzenleme URL'sine erişememesi kontrol edildi.
 
 Program formu mevcut `CreateWorkoutPlanRequest` alanlarıyla POST gönderir; Trainer kimliği request'e eklenmez, backend access token'dan alır. Güncel API `201 WorkoutPlanResponse` JSON yanıtı döner; web daha eski gövdesiz `201` yanıtıyla da çalışabilir. Başarıdan sonra danışanın program listesi yeniden yüklenir; istek hatasında form korunur. Atamadan hemen önce aktif danışan listesi tekrar kontrol edilir. Backend aktif ilişkiyi ve tek aktif program kuralını aynı transaction içinde uygular; pasif egzersizler yeni atamada kullanılamaz. Gün/egzersiz sıra kuralları ve ağırlık alanındaki en fazla iki ondalık basamak hem formda hem backend'de doğrulanır.
+
+Trainer, kendi oluşturduğu aktif programın detayındaki **Programı düzenle** bağlantısıyla aynı formu mevcut gün/hedeflerle açar. `/programlar/:userId/:workoutPlanId/duzenle`, `PUT /api/workout-plans/{id}` kullanır. Mevcut gün/satır kimlikleri korunur; yeni satırlar null kimlikle gönderilir. GET yanıtındaki `updatedAt`, request'in zorunlu `expectedUpdatedAt` alanına aynen aktarılır. Eski sürüm veya pasifleştirilen plan için `409` geldiğinde yeniden gönderim kapatılır ve güncel programa dönüş sunulur. Diğer hatalarda form korunur; başarıda detay API'den tekrar okunur. Geçmiş program ve başka Trainer'ın oluşturduğu program düzenlenmez; backend aynı yetkiyi tekrar denetler. Katalogdaki pasifleşmiş mevcut satır korunabilir, yeni satırlar yalnız aktif katalogdan seçilir. Önizleme düzenlemesi yalnız bellekte tutulur.
 
 Beslenme hedefi formu mevcut sözleşmedeki yedi alanı gönderir; Dietitian kimliğini backend token üzerinden alır. Başarı için sözleşmedeki oluşturulan aktif hedefi içeren JSON yanıtı beklenir; gövdesiz `201` beslenme ataması için başarı sayılmaz. Atamadan önce aktif danışan ilişkisi tekrar kontrol edilir; hata halinde form korunur. Backend yeni hedefi aktif edip önceki hedefi aynı veritabanı işleminde pasifleştirir. Sayı alanları en fazla iki ondalık basamak kabul eder. Su alanı yalnız hedeftir; tüketim verisi gösterilmez.
 

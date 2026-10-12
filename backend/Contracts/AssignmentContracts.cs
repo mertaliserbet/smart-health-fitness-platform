@@ -17,7 +17,8 @@ public sealed record WorkoutPlanSummaryResponse(Guid Id, string Name, DateOnly S
     DateOnly? EndDate, bool IsActive);
 
 public sealed record WorkoutPlanResponse(Guid Id, Guid UserId, Guid TrainerId, string Name,
-    string? Description, DateOnly StartDate, DateOnly? EndDate, bool IsActive, WorkoutDayResponse[] Days);
+    string? Description, DateOnly StartDate, DateOnly? EndDate, bool IsActive, WorkoutDayResponse[] Days,
+    DateTime? UpdatedAt, bool HasSessions);
 
 public sealed record WorkoutDayResponse(Guid Id, string Name, int DayNumber, Weekday Weekday,
     string? Description, WorkoutExerciseResponse[] Exercises);
