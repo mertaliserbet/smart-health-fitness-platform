@@ -226,3 +226,5 @@ Assert-Check ((Invoke-Api 'GET' '/api/users/me/workout-plans' $null $clientUser.
 Write-Output 'PASS: real advisor management, client/profile access, catalog, web-to-mobile plan/goal assignment, validation, concurrent replacements and relationship termination.'
 & (Join-Path $PSScriptRoot 'WorkoutPlanEditChecks.ps1')
 & (Join-Path $PSScriptRoot 'WorkoutSessionChecks.ps1')
+
+. (Join-Path $PSScriptRoot 'ClientProgressChecks.ps1')

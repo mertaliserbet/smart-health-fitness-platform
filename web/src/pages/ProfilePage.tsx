@@ -54,6 +54,9 @@ export function ProfilePage() {
             <Link className="button secondary" to={`/danisanlar/${userId}/gorevler`}>
               Görevler / Notlar
             </Link>
+            <Link className="button secondary" to={`/danisanlar/${userId}/ilerleme`}>
+              Kilo / Vücut ilerlemesi
+            </Link>
           </div>
         )}
         {userId && role === 'Trainer' && data && !loading && !error && (
