@@ -21,6 +21,7 @@ import type { WebRole } from './types/api';
 import { ClientAssignments } from './pages/ClientAssignments';
 import { AdvisorManagement } from './pages/AdvisorManagement';
 import { ClientBodyProgress } from './pages/ClientBodyProgress';
+import { ClientNutritionProgress } from './pages/ClientNutritionProgress';
 
 function ProtectedRoute() {
   const { user, role, restoring } = useAuth();
@@ -76,6 +77,10 @@ export function App() {
             <Route path="/egzersizler" element={<ExerciseCatalog />} />
           </Route>
           <Route element={<RoleRoute allowed={['Dietitian']} />}>
+            <Route
+              path="/danisanlar/:userId/beslenme-ilerlemesi"
+              element={<ClientNutritionProgress />}
+            />
             <Route path="/beslenme-hedefleri" element={<NutritionGoals />} />
             <Route path="/beslenme-hedefleri/:userId" element={<NutritionGoals />} />
             <Route path="/beslenme-hedefleri/:userId/yeni" element={<NutritionGoalCreate />} />

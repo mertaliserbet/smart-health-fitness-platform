@@ -36,6 +36,10 @@ Program ilk oturumundan sonra düzenlenmez; yeni program atanır. `WorkoutPlanRe
 
 `AuthSmoke.ps1` içindeki `WorkoutSessionChecks.ps1` gerçek PostgreSQL'de sahiplik/rol, validation, yeniden gönderim, eşzamanlı başlatma/log/tamamlama/program düzenleme, kısmi ilerleme, program değiştirme, sayfalama ve bitmiş/pasif ilişkileri sınar.
 
+## Diyetisyen beslenme ilerlemesi
+
+`GET /api/users/{userId}/nutrition-records`, mevcut NutritionService ve NutritionRecordResponse ile tüm geçmişi salt okunur getirir. Dietitian rolü ve aktif diyetisyen ilişkisi zorunludur; güncel hesap/rol kontrolleri AdvisorService tarafından yapılır. Yanıt `no-store` taşır. Kullanıcı kayıt/özet endpointleri ve şema değişmez; yeni migration yoktur. Ayrıntılar `docs/API_CONTRACT.md` 20.4 ve `docs/DIETITIAN_NUTRITION_PROGRESS.md` içindedir.
+
 ## Gereksinimler
 
 - .NET 10 SDK

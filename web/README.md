@@ -32,7 +32,9 @@ Trainer ve Dietitian için **Danışanlar → profil → Kilo / Vücut ilerlemes
 
 Trainer, danışan profilinden veya program listesinden **Antrenman geçmişi** ekranına ulaşır. Durum filtresi ve sayfalama gerçek API'yi kullanır; detayda hedefler, gerçekleşen set/tekrar/süre/ağırlık, notlar ve kaydı olmayan egzersizler gösterilir. Tamamlanmış oturum kısmi olabilir. Geçmiş yalnız aktif bağlı Trainer'a açıktır; demo modunda gerçek giriş açıklaması gösterilir. Oturum başlatılmış programın düzenleme bağlantısı kapanır; yeni program atanabilir.
 
-Beslenme kayıtları/ilerleme, profil düzenleme, rol yönetimi ve ekipman yönetim formu henüz uygulanmadı. Tamamlanmamış işlemler için işlevsiz düğmeler gösterilmez.
+Diyetisyen için **Danışanlar → profil → Beslenme ilerlemesi**: günlük kalori/makro toplamları, geçerli aktif hedef karşılaştırması, 7/30/90 günlük grafik ve öğün geçmişi. [Davranış ve API](../docs/DIETITIAN_NUTRITION_PROGRESS.md).
+
+Profil düzenleme, rol yönetimi ve ekipman yönetim formu henüz uygulanmadı. Tamamlanmamış işlemler için işlevsiz düğmeler gösterilmez.
 
 ## Gerçek API bağlantısı
 

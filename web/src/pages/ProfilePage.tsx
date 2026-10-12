@@ -74,6 +74,9 @@ export function ProfilePage() {
             <Link className="button primary" to={`/beslenme-hedefleri/${userId}`}>
               Beslenme hedefleri
             </Link>
+            <Link className="button secondary" to={`/danisanlar/${userId}/beslenme-ilerlemesi`}>
+              Beslenme ilerlemesi
+            </Link>
           </div>
         )}
         {loading || error ? (
