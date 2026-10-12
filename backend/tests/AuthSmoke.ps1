@@ -244,6 +244,7 @@ try {
     & (Join-Path $PSScriptRoot 'AssignmentChecks.ps1') -FirstToken $roleLogin.Body.accessToken `
         -SecondToken $secondLogin.Body.accessToken -FirstUserId $userId -SecondUserId $secondId
     & (Join-Path $PSScriptRoot 'AdvisorWorkflowChecks.ps1') -OtherUserToken $secondLogin.Body.accessToken -OtherUserId $secondId
+    & (Join-Path $PSScriptRoot 'ClientNutritionProgressChecks.ps1') -AdminToken $roleLogin.Body.accessToken -OtherUserId $secondId
     & (Join-Path $PSScriptRoot 'NutritionChecks.ps1') -FirstToken $roleLogin.Body.accessToken `
         -SecondToken $secondLogin.Body.accessToken -FirstUserId $userId -SecondUserId $secondId
     & (Join-Path $PSScriptRoot 'RunningChecks.ps1') -FirstToken $roleLogin.Body.accessToken `

@@ -1,0 +1,91 @@
+.nutrition-progress-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 24px;
+  margin-bottom: 24px;
+}
+.nutrition-progress-toolbar h2 {
+  font-size: 18px;
+}
+.nutrition-progress-toolbar p {
+  margin-top: 8px;
+}
+.nutrition-progress-toolbar label,
+.nutrition-progress-content label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+.nutrition-progress-section {
+  margin-bottom: 24px;
+}
+.nutrition-progress-content {
+  padding: 0 24px 24px;
+  overflow-wrap: anywhere;
+}
+.nutrition-progress-content > p {
+  font-size: 12px;
+  line-height: 1.7;
+  margin: 16px 0;
+}
+.nutrition-progress-content > select {
+  max-width: 320px;
+  margin-bottom: 20px;
+}
+.nutrition-progress-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+.nutrition-progress-totals {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr));
+  gap: 16px;
+  margin: 20px 0;
+}
+.nutrition-progress-totals article {
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.nutrition-progress-totals h3 {
+  font-size: 16px;
+  margin-bottom: 18px;
+}
+.nutrition-progress-totals dt {
+  color: var(--muted);
+  font-size: 12px;
+}
+.nutrition-progress-totals dd {
+  margin: 6px 0 16px;
+  font-size: 18px;
+}
+.nutrition-progress-daily-table {
+  margin-top: 20px;
+}
+.nutrition-progress-daily-table summary {
+  cursor: pointer;
+  padding: 10px 0;
+}
+.nutrition-progress-section .nutrition-meal-table {
+  min-width: 880px;
+}
+.nutrition-progress-section .nutrition-meal-table th,
+.nutrition-progress-section .nutrition-meal-table td {
+  display: table-cell;
+}
+.nutrition-meal-hint {
+  display: none;
+}
+@media (max-width: 600px) {
+  .nutrition-meal-hint {
+    display: block;
+    margin-bottom: 12px;
+    font-size: 12px;
+    line-height: 1.7;
+  }
+}

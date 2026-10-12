@@ -1670,7 +1670,11 @@ Kullanıcı analiz sonucunu onaylamadan `NutritionRecord` oluşturulmaz. `foodRe
 
 ## 20.4 Diyetisyenin Danışan Beslenme Kayıtlarını Görmesi
 
-**Planlanan endpoint; manuel kullanıcı takibi kapsamında henüz uygulanmadı.**
+**Uygulandı:** Bearer JWT + `Dietitian` rolü, token sahibine ait aktif `Dietitian` türünde `UserAdvisor` ilişkisi ve iki hesabın güncel uygun rolleri/aktifliği zorunludur. Yalnız Trainer/User/Admin rolü `403`; token yok/geçersiz veya kendi hesabı pasifse `401`. Atanmamış, bitmiş/iptal ilişki, pasif/`User` rolü kaldırılmış veya bulunmayan danışan `403` döner. Çoklu rol, aktif diyetisyen ilişkisi gereğini kaldırmaz.
+
+`200 NutritionRecordResponse[]`, boşsa `[]`; 20.2'nin mevcut DTO'su ve 20.1'in filtresiz sırası korunur (`consumedAt DESC`, `createdAt DESC`, `id ASC`). Mevcut `NutritionService` kullanılır; yanıt `Cache-Control: no-store` taşır. V1 danışman okumasında pagination veya query filtresi yoktur; `date/from/to/mealType/userId/advisorId` query değerleri listeyi veya sahipliği değiştirmez. Dönem, yerel gün, öğün filtresi ve tablo sayfaları web'de uygulanır.
+
+Danışman yazma route'u eklenmez. Kullanıcının kendi kayıt/özet API'leri ve şema değişmez. Web'de kayıtsız gün grafikte boşluktur; sıfır tüketim varsayılmaz. Günlük karşılaştırma, yalnız seçili günde geçerli olan mevcut aktif `NutritionGoal` ile yapılır; geçmiş pasif hedeflerden tarihsel hedef üretilmez.
 
 ```http
 GET /api/users/{userId}/nutrition-records
