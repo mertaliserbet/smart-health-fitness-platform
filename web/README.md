@@ -20,6 +20,7 @@ Adres: http://localhost:5173. Port doluysa Vite başka port seçmez; backend COR
 - Trainer / Dietitian / Admin için farklı menü, dashboard ve liste.
 - Trainer ve Dietitian danışan listesinde yerel isim araması ve profil görüntüleme.
 - Trainer için danışana göre program listesi ve detay, egzersiz kataloğu ve program oluşturup atama formu. Haftanın günü benzersizliği, gün/egzersiz sıralama, set/tekrar veya süre, dinlenme, ağırlık ve not alanları desteklenir.
+- Trainer dashboard'unda **Danışanın antrenman özeti**: aktif danışan seçimi, program atamaları ve API'nin tüm geçmiş oturum toplamı, aktif programın tarih durumu, son beş oturum ve program/geçmiş/detay bağlantıları. [Davranış ve API](../docs/TRAINER_WORKOUT_DASHBOARD.md).
 - Dietitian için danışana göre beslenme hedefi geçmişi ve yeni hedef atama formu. Günlük kalori, protein, karbonhidrat, yağ, su ve geçerlilik tarihleri desteklenir. Aktif hedefin bugün geçerli, henüz başlamamış veya süresi dolmuş olduğu ayrı gösterilir.
 - Trainer/Dietitian için **Danışan Detayı → Görevler / Notlar**: gerçek görev/not atama, geçmiş ve görev durumu. İstek hatasında form korunur; gönderim sırasında yinelenen kaydetme engellenir. Mobil kullanıcı görevi tamamlayınca sayfa yeniden açıldığında veya yenilendiğinde güncel durum görülür.
 - Admin kullanıcı listesi, sayfalama ve temel hesap bilgileri. Admin ekranında kişisel sağlık verisi gösterilmez.
