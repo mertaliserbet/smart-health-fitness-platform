@@ -7,6 +7,7 @@ import { getClients, getUsers } from '../services/clientService';
 import { PageState } from '../components/PageState';
 import { PeopleTable } from '../components/PeopleTable';
 import type { ClientSummary, UserSummary } from '../types/api';
+import { TrainerWorkoutSummary } from '../components/TrainerWorkoutSummary';
 
 export function Dashboard() {
   const { user, role, demo } = useAuth();
@@ -105,6 +106,14 @@ export function Dashboard() {
           <span className="hero-node node-c">EK</span>
         </div>
       </section>
+      {role === 'Trainer' && !loading && !error && data && (
+        <TrainerWorkoutSummary
+          clients={data.people.filter(
+            (person): person is ClientSummary =>
+              'relationshipStatus' in person && person.relationshipStatus === 'Active',
+          )}
+        />
+      )}
       <div className="dashboard-grid">
         <div className="dashboard-main">
           <section className="metric-grid" aria-label="Panel özeti">
