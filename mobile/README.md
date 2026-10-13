@@ -131,6 +131,29 @@ Shell içindeki `IndexedStack` sekme içeriklerini ve kaydırma konumlarını ko
 
 ## Kontroller
 
+### Takip > Sağlık Verileri (temel entegrasyon)
+
+**Takip → Sağlık Verileri → veri türlerini seç → İzin Ver ve Oku**.
+
+- Android'de Health Connect, iOS'ta HealthKit için `health: 13.3.2` kullanılır. Ekran açılışında OS izin penceresi otomatik gösterilmez. Yalnız seçili adım, aktif kalori ve nabız türleri için **READ** istenir; yazma, hareket sensörü, arka plan veya eski geçmiş izni istenmez. Mevcut GPS konum izinleri koşu özelliğine aittir; sağlık okuması bunları istemez.
+- Adım ve aktif kalori cihazın yerel gece yarısından okuma anına kadar olan toplamdır. Toplamlar native sağlık istatistiklerinden alınır; farklı kaynakların ham kayıtları toplanıp çift sayım yapılmaz. Nabız son 7 takvim günündeki en yeni kayıt ve gerçek kayıt zamanı/kaynağıdır; canlı ölçüm veya tıbbi değerlendirme değildir.
+- Veri yoksa `0` uydurulmaz. Desteksiz cihaz, kurulum/güncelleme ihtiyacı, verilmemiş izin, boş veri ve okuma hatası ayrı gösterilir. Türlerden birinin okunamaması diğerlerinin sonucunu gizlemez. **Yenile** veya aşağı çekme ön planda yeniden okur; ayarlardan dönüşte izinler tekrar kontrol edilir.
+- HealthKit gizlilik gereği okuma izninin reddini bildirmez. İzin penceresinin tamamlanması “izin kesin verildi” anlamına gelmez. Boş sonuçta “veri yok veya okuma izni paylaşılmadı” görünür. İzinler Apple Sağlık → profil → Uygulamalar ve Servisler üzerinden kontrol edilir.
+- Android izinleri **Sağlık İzinlerini Aç** ile Health Connect'ten yönetilir. Android izin kaldırırken uygulama sürecini kapatabilir; tekrar açıldığında eski değerler kullanılmaz. Sağlık ekranı verileri yalnız bellekte tutar; logout/route kapanışında ekran kaldırılır.
+- Bu görev yalnız **cihazdan okuma ve mobil gösterim** içindir. Dokümandaki Activity/Health backend endpointleri henüz uygulanmadığından API'ye gönderme, PostgreSQL kaydı veya “senkronize edildi” bildirimi yoktur. Üreticiye özel bağlantı, background sync ve sağlık analizi eklenmedi.
+
+**Platform ayarları:** Android minimum SDK 26 (Health Connect'in kullanılabilirliği ayrıca cihazda kontrol edilir); manifestte yalnız üç sağlık okuma izni vardır. `FlutterFragmentActivity` native izin sonucunu destekler. Health Connect'in izin açıklaması için ayrı native `HealthPermissionsActivity`/Android 14 alias'ı bulunur; açıklama oturum açılmadan da görüntülenebilir. iOS minimum sürümü paketin gerektirdiği **15.0**'dır; hem Debug hem Release plist'inde `NSHealthShareUsageDescription`, Runner entitlements/proje capability'sinde HealthKit vardır. Yazma kullanılmadığından `NSHealthUpdateUsageDescription` veya background delivery entitlement eklenmez.
+
+**Windows'ta doğrulanabilenler:** `flutter analyze`, tüm Flutter testleri, Android APK ve native emülatör desteği/izin/boş veri ekranı. Emülatöre test sağlık kaydı eklenmez. Gerçek sağlık örnekleri için Health Connect'e veri yazan uygulama/cihaz ve izinleri gerekir; emülatörün boş deposu gerçek kullanıcı verisinin yerine geçirilmez.
+
+**Mac/iPhone'da ayrıca:** `flutter pub get`, Runner workspace/projesini Xcode'da açma, Team/provisioning profilinde HealthKit capability'sini doğrulama, iOS derleme ve gerçek cihazda tür bazlı izin verme/reddetme, veri okuma, kilitli cihaz/izin kaldırma ve logout kontrolü. iOS derlemesi, native izin penceresi, HealthKit sorguları ve imzalama Windows'ta doğrulanamaz.
+
+Native Android testi `integration_test/health_flow_test.dart` içindedir. Test emülatöründe üç READ izni başlangıçta kapalı olmalıdır. `--dart-define=HEALTH_NATIVE_TEST=true` ile çalışırken native izin isteği reddedilir; `HEALTH_NATIVE_GRANT_STEPS` kontrol noktasında yalnız `READ_STEPS` verilir. Test bittikten sonra izin kaldırılır; `--dart-define=HEALTH_NATIVE_REVOKED=true` eklenerek ikinci çalıştırmada yeniden açılış kontrol edilir. İzin kaldırmayı çalışan testin ortasında yapmak Android'in test sürecini kapatmasına yol açar. Hiç sağlık verisi yazılmaz. Bu test geliştirici kontrolüdür; normal uygulama başlatma komutları değişmedi.
+
+Paket mevcut Flutter sürümünde APK üretir; Android derlemesi paketin Kotlin Gradle Plugin kullanımı için **gelecekteki Flutter sürümlerine yönelik** bir uyumluluk uyarısı verir. Flutter yükseltirken paket uyumluluğu yeniden kontrol edilmelidir; bu görevde Gradle/Flutter sürümleri değiştirilmedi.
+
+Kaynaklar: [health paketinin kurulum/API dokümanı](https://pub.dev/packages/health/versions/13.3.2), [Android Health Connect kurulumu](https://developer.android.com/health-and-fitness/health-connect/get-started), [Apple HealthKit izinleri](https://developer.apple.com/documentation/healthkit/authorizing-access-to-health-data).
+
 ### Takip / Gelişim
 
 - **7 gün / 30 gün / Tüm zamanlar** kilo, ölçüm geçmişi ve koşu özetini filtreler. 30 gün başlangıç görünümüdür; bugün dahil cihazın yerel takvim günleri kullanılır. Filtre mevcut API kayıtlarını cihazda süzer, yeni backend endpointi yoktur.

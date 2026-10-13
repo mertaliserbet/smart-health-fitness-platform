@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../core/api_service.dart';
+import '../health/health_data_screen.dart';
+import '../health/health_service.dart';
 import '../nutrition/nutrition_models.dart';
 import '../nutrition/nutrition_screen.dart';
 import '../nutrition/nutrition_service.dart';
@@ -239,6 +241,16 @@ class _TrackingScreenState extends State<TrackingScreen>
                           onPressed: _openRunning,
                           icon: const Icon(Icons.directions_run),
                           label: const Text('Koşu'),
+                        ),
+                        OutlinedButton.icon(
+                          onPressed: () => Navigator.of(context).push<void>(
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  HealthDataScreen(service: HealthService()),
+                            ),
+                          ),
+                          icon: const Icon(Icons.favorite_outline),
+                          label: const Text('Sağlık Verileri'),
                         ),
                       ],
                     ),

@@ -2,6 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+    <key>NSHealthShareUsageDescription</key>
+    <string>Seçtiğin adım, aktif kalori ve kalp atış hızı verilerini Takip ekranında göstermek için Apple Sağlık verilerini okuyoruz. Sağlık verisi yazmıyoruz.</string>
     <key>NSLocationWhenInUseUsageDescription</key>
     <string>Koşu sırasında gerçek rota ve mesafeyi kaydetmek için konumunu kullanıyoruz.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>

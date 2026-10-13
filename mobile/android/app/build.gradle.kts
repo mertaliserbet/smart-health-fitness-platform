@@ -18,7 +18,7 @@ android {
         applicationId = "com.smarthealthfitness.smart_health_fitness_mobile"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
+        minSdk = 26 // health plugin; Health Connect availability is checked at runtime.
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
